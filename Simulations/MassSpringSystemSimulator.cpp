@@ -1,12 +1,19 @@
 #include "MassSpringSystemSimulator.h"
+#include "stdexcept"
+
+
+#define WHITE {1,1,1}
 
 //------------------------------
 // Constructor
 //------------------------------
-MassSpringSystemSimulator::MassSpringSystemSimulator(){
-	m_fMass = 10;
-	m_fStiffness = 40;
-	m_sInitialLength = 1;
+MassSpringSystemSimulator::MassSpringSystemSimulator():m_fMass(10), m_fStiffness(40){
+	this->reset();
+
+	//initialize one massspring
+	int p1 = addMassPoint({0,0,0}, {-1,0,0}, false);
+	int p2 = addMassPoint({0,2,0}, {1,0,0}, false);
+	addSpring(p1, p2, 1);
 }
 
 //------------------------------
@@ -15,8 +22,10 @@ MassSpringSystemSimulator::MassSpringSystemSimulator(){
 const char* MassSpringSystemSimulator::getTestCasesStr(){
 	return "Euler, Midpoint, Leap-Forg";
 }
+
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass *DUC){
 	this->DUC = DUC;
+	//TODO: init UI to generate springs and masspoints
 }
 
 void MassSpringSystemSimulator::reset(){
@@ -25,8 +34,12 @@ void MassSpringSystemSimulator::reset(){
 	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
 }
 
-void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext *DUC){
-	//TODO
+void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext *pd3dImmediateContext){
+	for(const auto &s : springs){
+		DUC->beginLine();
+		DUC->drawLine(getPositionOfMassPoint(s.masspoint1), WHITE, getPositionOfMassPoint(s.masspoint2), WHITE);
+		DUC->endLine();
+	}
 }
 
 void MassSpringSystemSimulator::notifyCaseChanged(int testCase){
@@ -34,7 +47,6 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase){
 	switch(m_iTestCase){
 		case 0:
 			std::cout << "Euler" <<std::endl;
-			//TODO
 			break;
 		case 1:
 			std::cout << "Midpoint" << std::endl;
@@ -87,6 +99,9 @@ int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool i
 }
 
 void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength){
+	if(masspoint1 >= masspoints.size() || masspoint2 >= masspoints.size()){
+		throw std::invalid_argument("masspoints index bigger than the size of masspoints");
+	}
 	struct Spring spring;
 	spring.masspoint1 = masspoint1;
 	spring.masspoint2 = masspoint2;

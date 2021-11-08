@@ -61,7 +61,6 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
-	int m_sInitialLength;
 
 	// Containers
 	std::vector<MassPoint> masspoints;
