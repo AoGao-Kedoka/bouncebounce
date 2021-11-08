@@ -6,8 +6,8 @@
 - Barnabás Börcsök
 
 ## Todos
-[] Invite Markus to the repository
-[] Ask if it's okay to use this __public__ repository?
+- [] Invite Markus to the repository
+- [] Ask if it's okay to use this __public__ repository?
 
 -------------------------------------------------------------------------------
 --- Visual Studio 2013/15/17 Template Project for C++/DirectX11 Application ---
