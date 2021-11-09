@@ -25,6 +25,11 @@ public:
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
+	// helper functions
+	float calcDistance(Vec3 p1, Vec3 p2);
+	void computeEuler(float timeElapsed, int initialLength, float stiffness);
+	void computeMidPoint(float timeElapsed, int initialLength, float stiffness);
+
 	// Specific Functions
 	void setMass(float mass);
 	void setStiffness(float stiffness);
@@ -36,6 +41,7 @@ public:
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
 	void applyExternalForce(Vec3 force);
+
 	
 	// Do Not Change
 	void setIntegrator(int integrator) {
