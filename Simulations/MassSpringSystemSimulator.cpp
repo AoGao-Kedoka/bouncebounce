@@ -7,30 +7,63 @@
 //------------------------------
 // Constructor
 //------------------------------
-MassSpringSystemSimulator::MassSpringSystemSimulator():m_fMass(10), m_fStiffness(40){
+MassSpringSystemSimulator::MassSpringSystemSimulator():m_fMass(10), m_fStiffness(40), m_frestLength(1), m_fGravityToogle(false){
 	this->reset();
 
-	//initialize one massspring
-	int p1 = addMassPoint({0,0,0}, {-1,0,0}, true);
+	// initialize gravity
+	m_fGravity.x = m_fGravity.z = 0;
+	m_fGravity.y = -10;
+
+	// initialize one massspring
+	int p1 = addMassPoint({0,0,0}, {-1,0,0}, false);
 	int p2 = addMassPoint({0,2,0}, {1,0,0}, false);
-	addSpring(p1, p2, 1);
+	addSpring(p1, p2, m_frestLength);
 }
 
 //------------------------------
 // Helper Functions
 //------------------------------
-float MassSpringSystemSimulator::calcDistance(Vec3 p1, Vec3 p2){
-	float diffX = std::abs(p1.x - p2.x);
-	float diffY = std::abs(p1.y - p2.y);
-	float diffZ = std::abs(p1.z - p2.z);
+float MassSpringSystemSimulator::calcDistance(Vec3 p1, Vec3 p2, Vec3 *direction){
+	float diffX = p1.x - p2.x;
+	float diffY = p1.y - p2.y;
+	float diffZ = p1.z - p2.z;
+	direction->x = diffX;
+	direction->y = diffY;
+	direction->z = diffZ;
 	return std::sqrt(std::pow(diffX, 2) + std::pow(diffY, 2) + std::pow(diffZ, 2));
 }
 
-void MassSpringSystemSimulator::computeEuler(float timeElapsed, int initialLength, float stiffness){
+void MassSpringSystemSimulator::computeEuler(float timeStep){
+	for(const auto &s : springs){
+		// update position
+		auto *mp1 = &masspoints[s.masspoint1];
+		auto *mp2 = &masspoints[s.masspoint2];
+		mp1->position += timeStep * mp1->velocity;
+		mp2->position += timeStep * mp2->velocity;
+		std::cout<<"Masspoint1's position: " << mp1->position << std::endl; 
+		std::cout<<"Masspoint2's position: " << mp2->position << std::endl; 
+
+		// update velocity	
+		Vec3 direction;
+		auto distance = this->calcDistance(mp1->position, mp2->position, &direction);
+		Vec3 force = m_fStiffness * (distance - m_frestLength) * (direction/distance);
 		
+		
+		Vec3 a1 = - force / m_fMass;
+		Vec3 a2 = force / m_fMass;
+		if(m_fGravityToogle){
+			a1 += m_fGravity;
+			a2 += m_fGravity;	
+		}
+
+		mp1->velocity += timeStep * a1;
+		mp2->velocity += timeStep * a2;
+		std::cout<<"Masspoint1's velocity: " << mp1->velocity << std::endl;
+		std::cout<<"Masspoint2's velocity: " << mp1->velocity << std::endl;
+	}
 }
 
-void MassSpringSystemSimulator::computeMidPoint(float timeElapsed, int initialLength, float stiffness){
+void MassSpringSystemSimulator::computeMidPoint(float timeStep){
 
 }
 
@@ -47,6 +80,7 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass *DUC){
 		TwAddSeparator(DUC->g_pTweakBar, "separator", NULL);
 		TwAddVarRO(DUC->g_pTweakBar, "InitialLength", TW_TYPE_FLOAT, &s.initialLength, "");
 	}
+	TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_BOOLCPP, &m_fGravityToogle, "");
 }
 
 void MassSpringSystemSimulator::reset(){
@@ -107,13 +141,15 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed){
 		// find a proper scale!
 		float inputScale = 0.001f;
 		inputWorld = inputWorld * inputScale;
-		//TODO: still have bugs somehow
-		masspoints[springs[0].masspoint1].position += inputWorld;
+		//TODO:Update position
 	}
 }
 
 void MassSpringSystemSimulator::simulateTimestep(float timeStep){
-	//TODO
+	switch(m_iTestCase){
+		case 0:
+			this->computeEuler(timeStep);
+	}
 }
 
 void MassSpringSystemSimulator::onClick(int x, int y){

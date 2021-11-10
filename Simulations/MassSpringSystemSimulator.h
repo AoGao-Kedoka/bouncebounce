@@ -26,9 +26,9 @@ public:
 	void onMouse(int x, int y);
 
 	// helper functions
-	float calcDistance(Vec3 p1, Vec3 p2);
-	void computeEuler(float timeElapsed, int initialLength, float stiffness);
-	void computeMidPoint(float timeElapsed, int initialLength, float stiffness);
+	float calcDistance(Vec3 p1, Vec3 p2, Vec3* direction);
+	void computeEuler(float timeStep);
+	void computeMidPoint(float timeStep);
 
 	// Specific Functions
 	void setMass(float mass);
@@ -67,6 +67,9 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+	float m_frestLength;
+	bool m_fGravityToogle;
+	Vec3 m_fGravity;
 
 	// Containers
 	std::vector<MassPoint> masspoints;
