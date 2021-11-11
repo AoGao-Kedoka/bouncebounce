@@ -27,8 +27,11 @@ public:
 
 	// helper functions
 	float calcDistance(Vec3 p1, Vec3 p2, Vec3* direction);
+	std::pair<Vec3, Vec3> calcAcc(Vec3 position1, Vec3 position2);
 	void computeEuler(float timeStep);
 	void computeMidPoint(float timeStep);
+	void computeLeapFrog(float timeStep);
+	void generateNumberOfSprings(int number);
 
 	// Specific Functions
 	void setMass(float mass);
@@ -63,6 +66,7 @@ private:
 	};
 
 	// Data Attributes
+	int demo = 1;
 	float m_fMass;
 	float m_fStiffness;
 	float m_fDamping;
