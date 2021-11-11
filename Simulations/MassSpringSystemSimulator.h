@@ -31,7 +31,7 @@ public:
 	void computeEuler(float timeStep);
 	void computeMidPoint(float timeStep);
 	void computeLeapFrog(float timeStep);
-	void generateNumberOfSprings(int number);
+	void buildSprings(int number);
 
 	// Specific Functions
 	void setMass(float mass);
@@ -66,7 +66,6 @@ private:
 	};
 
 	// Data Attributes
-	int demo = 1;
 	float m_fMass;
 	float m_fStiffness;
 	float m_fDamping;
