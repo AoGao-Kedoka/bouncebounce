@@ -7,12 +7,12 @@
 //------------------------------
 // Constructor
 //------------------------------
-MassSpringSystemSimulator::MassSpringSystemSimulator():m_fMass(10), m_fStiffness(40), m_frestLength(1), m_fGravityToogle(false){
+MassSpringSystemSimulator::MassSpringSystemSimulator():m_fMass(10), m_fStiffness(40), m_frestLength(1), m_bGravityToogle(false), m_iIntegrator(0){
 	this->reset();
 
 	// initialize gravity
-	m_fGravity.x = m_fGravity.z = 0;
-	m_fGravity.y = -10;
+	m_vGravity.x = m_vGravity.z = 0;
+	m_vGravity.y = -10;
 }
 
 //------------------------------
@@ -35,14 +35,16 @@ std::pair<Vec3, Vec3> MassSpringSystemSimulator::calcAcc(Vec3 position1, Vec3 po
 		
 		Vec3 a1 = - force / m_fMass;
 		Vec3 a2 = force / m_fMass;
-		if(m_fGravityToogle){
-			a1 += m_fGravity;
-			a2 += m_fGravity;	
+		if(m_bGravityToogle){
+			a1 += m_vGravity;
+			a2 += m_vGravity;	
 		}
 		return std::make_pair(a1, a2);
 }
 
 void MassSpringSystemSimulator::buildSprings(int number){
+	if (number == 0)
+		return;
 	if(number == 1){
 		Vec3 position1 = {0,0,0};
 		Vec3 position2 = {0,2,0};
@@ -52,7 +54,7 @@ void MassSpringSystemSimulator::buildSprings(int number){
 		int p2 = addMassPoint(position2, velocity2, false);
 		addSpring(p1, p2, m_frestLength);
 	} else {
-		// generate random 10 springs
+		//TODO
 	}
 }
 
@@ -111,20 +113,27 @@ void MassSpringSystemSimulator::computeLeapFrog(float timeStep){
 // UI
 //------------------------------
 const char* MassSpringSystemSimulator::getTestCasesStr(){
-	return "Demo1, Demo2, Demo3, Demo4 with Euler, Demo4 with Midpoint";
+	return "DemoForTest, Demo1, Demo2, Demo3, Demo4";
 }
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass *DUC){
 	this->DUC = DUC;
 	TwAddSeparator(DUC->g_pTweakBar, "SeperatorUp", "");
-	TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_BOOLCPP, &m_fGravityToogle, "");
-	if(m_iTestCase == 0)
-		TwAddButton(DUC->g_pTweakBar, "time step help0", NULL, NULL, "label='please ignore time step above'");
+	TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_BOOLCPP, &m_bGravityToogle, "");
+	if(m_iTestCase == 1){
+		TwAddButton(DUC->g_pTweakBar, "time step help", NULL, NULL, "label='please ignore time step above'");
 		TwAddButton(DUC->g_pTweakBar, "time step0", NULL, NULL, "label='new time step = 0.1'");
-	if(m_iTestCase == 1 || m_iTestCase == 2){
-		TwAddButton(DUC->g_pTweakBar, "time step help0", NULL, NULL, "label='please ignore time step above'");
+	}
+	else if(m_iTestCase == 2 || m_iTestCase == 3){
+		TwAddButton(DUC->g_pTweakBar, "time step help", NULL, NULL, "label='please ignore time step above'");
 		TwAddButton(DUC->g_pTweakBar, "time step", NULL, NULL, "label='new time step = 0.005'");
+		TwAddVarRO(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "");
 		TwRemoveVar(DUC->g_pTweakBar, "time step0");
+	} else if(m_iTestCase == 4){
+		TwRemoveVar(DUC->g_pTweakBar, "time step0");
+		TwRemoveVar(DUC->g_pTweakBar, "time step");
+		TwRemoveVar(DUC->g_pTweakBar, "time step help");
+		TwAddVarRW(DUC->g_pTweakBar, "Integrate1", TW_TYPE_INT8, &m_iIntegrator, "");
 	}
 }
 
@@ -152,23 +161,24 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase){
 	m_iTestCase = testCase;
 	switch(m_iTestCase){
 		case 0:
-			std::cout << "Demo1" <<std::endl;
-			this->buildSprings(1);
-			break;
+			std::cout << "Demo for test usage" << std::endl;
+			break;	
 		case 1:
-			this->reset();
-			std::cout << "Demo2" << std::endl;
+			this->buildSprings(1);
+			std::cout << "Demo1" <<std::endl;
 			break;
 		case 2:
 			this->reset();
-			std::cout << "Demo3" << std::endl;
+			std::cout << "Demo2" << std::endl;
 			break;
 		case 3:
 			this->reset();
-			std::cout << "Demo4 with Euler" << std::endl;
+			std::cout << "Demo3" << std::endl;
+			break;
 		case 4:
 			this->reset();
-			std::cout << "Demo4 with Midpoint" << std::endl;
+			std::cout << "Demo4 with Euler" << std::endl;
+			this->buildSprings(10);
 		default:
 			break;
 	}
@@ -197,6 +207,12 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed){
 void MassSpringSystemSimulator::simulateTimestep(float timeStep){
 	switch(m_iTestCase){
 		case 0:
+			if(m_iIntegrator == 0)
+				this->computeEuler(timeStep);
+			else if(m_iIntegrator == 1)
+				this->computeMidPoint(timeStep);
+			break;
+		case 1:
 			// only compute 1 time
 			if(masspoints[springs[0].masspoint1].position.x == 0){
 				this->computeEuler(0.1);	
@@ -205,17 +221,23 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep){
 					this->computeMidPoint(0.1);
 			}
 			break;
-		case 1:
+		case 2:
 			this->computeEuler(0.005);
 			break;
-		case 2:
+		case 3:
 			this->computeMidPoint(0.005);
 			break;
-		case 3:
-			this->computeEuler(timeStep);
-			break;
 		case 4:
-			this->computeMidPoint(timeStep);
+			if(m_iIntegrator == 0)
+				this->computeEuler(timeStep);
+			else if (m_iIntegrator == 1)
+				this->computeMidPoint(timeStep);
+			break;
+		default:
+			if(m_iIntegrator == 0)
+				this->computeEuler(timeStep);
+			else if(m_iIntegrator == 2)
+				this->computeMidPoint(timeStep);
 			break;
 	}
 }

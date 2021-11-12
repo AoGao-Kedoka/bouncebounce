@@ -71,8 +71,8 @@ private:
 	float m_fDamping;
 	int m_iIntegrator;
 	float m_frestLength;
-	bool m_fGravityToogle;
-	Vec3 m_fGravity;
+	bool m_bGravityToogle;
+	Vec3 m_vGravity;
 
 	// Containers
 	std::vector<MassPoint> masspoints;
