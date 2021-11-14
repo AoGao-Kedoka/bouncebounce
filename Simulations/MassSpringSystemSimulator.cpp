@@ -126,7 +126,7 @@ void MassSpringSystemSimulator::computeMidPoint(float timeStep) {
 		std::cout << "Midpoint--" << "Masspoint1's position: " << mp1->position << std::endl;
 		std::cout << "Midpoint--" << "Masspoint2's position: " << mp2->position << std::endl;
 		std::cout << "Midpoint--" << "Masspoint1's velocity: " << mp1->velocity << std::endl;
-		std::cout << "Midpoint--" << "Masspoint2's velocity: " << mp1->velocity << std::endl;
+		std::cout << "Midpoint--" << "Masspoint2's velocity: " << mp2->velocity << std::endl;
 	}
 }
 
