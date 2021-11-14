@@ -43,11 +43,30 @@ public:
 	}
 
 private:
+	// Structs
+	struct MassPoint {
+		Vec3 p;
+		Vec3 v;
+		bool isFixed;
+	};
+
+	// Spring connecting Mass Points A and B
+	struct Spring {
+		int A;
+		int B;
+		// initial length
+		float L;
+	};
+
 	// Data Attributes
 	float m_fMass;
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+
+	// Containers
+	std::vector<MassPoint> masspoints;
+	std::vector<Spring> springs;
 
 	// UI Attributes
 	Vec3 m_externalForce;
