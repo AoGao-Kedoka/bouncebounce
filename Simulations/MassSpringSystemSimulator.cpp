@@ -4,13 +4,18 @@
 #define WHITE {1,1,1}
 
 //------------------------------
-// Constructor
+// Constructor and Destructor
 //------------------------------
 MassSpringSystemSimulator::MassSpringSystemSimulator() :m_fMass(10), m_fStiffness(40), m_frestLength(1), m_bGravityToogle(false), m_iIntegrator(0) {
 	this->reset();
 
 	// initialize gravity
 	m_vGravity = Vec3(0, -10, 0);
+}
+
+MassSpringSystemSimulator::~MassSpringSystemSimulator(){
+	springs.clear();
+	masspoints.clear();
 }
 
 //------------------------------
@@ -138,23 +143,15 @@ const char* MassSpringSystemSimulator::getTestCasesStr() {
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC) {
 	this->DUC = DUC;
+	TwRemoveVar(DUC->g_pTweakBar, "Timestep");
+	TwAddVarRO(DUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, &m_ftimeStep_Cur, "");
 	TwAddSeparator(DUC->g_pTweakBar, "SeperatorUp", "");
 	TwAddVarRW(DUC->g_pTweakBar, "Rest Length", TW_TYPE_FLOAT, &m_frestLength, "step = 0.2");
 	TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_BOOLCPP, &m_bGravityToogle, "");
-	if (m_iTestCase == 1) {
-		TwAddButton(DUC->g_pTweakBar, "time step help", NULL, NULL, "label='please ignore time step above'");
-		TwAddButton(DUC->g_pTweakBar, "time step0", NULL, NULL, "label='new time step = 0.1'");
-	}
-	else if (m_iTestCase == 2 || m_iTestCase == 3) {
-		TwAddButton(DUC->g_pTweakBar, "time step help", NULL, NULL, "label='please ignore time step above'");
-		TwAddButton(DUC->g_pTweakBar, "time step", NULL, NULL, "label='new time step = 0.005'");
+	if (m_iTestCase == 2 || m_iTestCase == 3) {
 		TwAddVarRO(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "");
-		TwRemoveVar(DUC->g_pTweakBar, "time step0");
 	}
 	else if (m_iTestCase == 4) {
-		TwRemoveVar(DUC->g_pTweakBar, "time step0");
-		TwRemoveVar(DUC->g_pTweakBar, "time step");
-		TwRemoveVar(DUC->g_pTweakBar, "time step help");
 		TwRemoveVar(DUC->g_pTweakBar, "Integrate");
 		TwAddVarRW(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "min=0, max=1");
 	}
@@ -236,30 +233,37 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		break;
 	case 1:
 		// only compute 1 time
+		m_ftimeStep_Cur = 0.1;
 		if (masspoints[springs[0].masspoint1].position.x == 0) {
-			this->computeEuler(0.1);
+			this->computeEuler(m_ftimeStep_Cur);
 			this->reset();
 			if (masspoints[springs[0].masspoint1].position.x == 0)
-				this->computeMidPoint(0.1);
+				this->computeMidPoint(m_ftimeStep_Cur);
 		}
 		break;
 	case 2:
-		this->computeEuler(0.005);
+		m_ftimeStep_Cur = 0.005;
+		this->computeEuler(m_ftimeStep_Cur);
 		break;
 	case 3:
-		this->computeMidPoint(0.005);
+		m_ftimeStep_Cur = 0.005;
+		this->computeMidPoint(m_ftimeStep_Cur);
 		break;
 	case 4:
+		m_ftimeStep_Cur = timeStep;
 		if (m_iIntegrator == 0)
-			this->computeEuler(timeStep);
+			this->computeEuler(m_ftimeStep_Cur);
 		else if (m_iIntegrator == 1)
-			this->computeMidPoint(timeStep);
+			this->computeMidPoint(m_ftimeStep_Cur);
 		break;
 	default:
-		if (m_iIntegrator == 0)
-			this->computeEuler(timeStep);
-		else if (m_iIntegrator == 2)
-			this->computeMidPoint(timeStep);
+		m_ftimeStep_Cur = 0.1;
+		if (masspoints[springs[0].masspoint1].position.x == 0) {
+			this->computeEuler(m_ftimeStep_Cur);
+			this->reset();
+			if (masspoints[springs[0].masspoint1].position.x == 0)
+				this->computeMidPoint(m_ftimeStep_Cur);
+		}
 		break;
 	}
 }

@@ -13,6 +13,7 @@ class MassSpringSystemSimulator:public Simulator{
 public:
 	// Construtors
 	MassSpringSystemSimulator();
+	~MassSpringSystemSimulator();
 	
 	// UI Functions
 	const char * getTestCasesStr();
@@ -73,6 +74,7 @@ private:
 	float m_frestLength;
 	bool m_bGravityToogle;
 	Vec3 m_vGravity;
+	float m_ftimeStep_Cur;
 
 	// Containers
 	std::vector<MassPoint> masspoints;
