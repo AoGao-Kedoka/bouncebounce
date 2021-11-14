@@ -9,16 +9,9 @@ MassSpringSystemSimulator::MassSpringSystemSimulator():
     m_fDamping(0.0f),
     m_iIntegrator(MIDPOINT),
     m_fRestLength(1.0f),
-    m_vGravityValue(0,-9.8f,0)
+    m_vGravityValue(0,-9.8f,0),
+    m_bIsGravity(false)
 {
-    this->reset();
-
-    int A = addMassPoint({ 0,0,0 }, { -1,0,0 }, false);
-    int B = addMassPoint({ 0,2,0 }, { 1,0,0 }, false);
-    addSpring(A, B, 1);
-
-    setMass(10);
-    setStiffness(40);
 }
 
 const char* MassSpringSystemSimulator::getTestCasesStr()
@@ -27,7 +20,7 @@ const char* MassSpringSystemSimulator::getTestCasesStr()
             Demo 1: A simple one-step test, \
             Demo 2: A simple Euler simulation, \
             Demo 3: A simple Midpoint simulation, \
-            Demo 4: A complex simulation, comparing stability of Euler and Midpoint";
+            Demo 4: A complex simulation -- comparing stability of Euler and Midpoint";
 }
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -176,6 +169,10 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
             this->computeMidPoint(m_fTimeStep);
         break;
     default:
+        if (m_iIntegrator == EULER)
+            this->computeEuler(timeStep);
+        if (m_iIntegrator == MIDPOINT)
+            this->computeMidPoint(timeStep);
         break;
     }
 }
