@@ -171,10 +171,12 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC) {
 	TwAddVarRW(DUC->g_pTweakBar, "Rest Length", TW_TYPE_FLOAT, &m_frestLength, "step = 0.2");
 	TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_BOOLCPP, &m_bGravityToogle, "");
 	if (m_iTestCase == 2 || m_iTestCase == 3 || m_iTestCase == 5) {
+		TwAddButton(DUC->g_pTweakBar, "Info", NULL, NULL, "label='0=Euler,1=Leap-Frog,2=Midpoint'");
 		TwAddVarRO(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "");
 	}
 	else if (m_iTestCase == 4) {
 		TwRemoveVar(DUC->g_pTweakBar, "Integrate");
+		TwAddButton(DUC->g_pTweakBar, "InfoComplex", NULL, NULL, "label='0=Euler,1=Leap-Frog,2=Midpoint'");
 		TwAddVarRW(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "min=0, max=2");
 	}
 }
@@ -258,6 +260,8 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		if (m_iIntegrator == 0)
 			this->computeEuler(timeStep);
 		else if (m_iIntegrator == 1)
+			this->computeLeapFrog(timeStep);
+		else if (m_iIntegrator == 2)
 			this->computeMidPoint(timeStep);
 		break;
 	case 1:
@@ -292,13 +296,12 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		this->computeLeapFrog(m_ftimeStep_Cur);
 		break;
 	default:
-		m_ftimeStep_Cur = 0.1;
-		if (masspoints[springs[0].masspoint1].position.x == 0) {
-			this->computeEuler(m_ftimeStep_Cur);
-			this->reset();
-			if (masspoints[springs[0].masspoint1].position.x == 0)
-				this->computeMidPoint(m_ftimeStep_Cur);
-		}
+		if (m_iIntegrator == 0)
+			this->computeEuler(timeStep);
+		else if (m_iIntegrator == 1)
+			this->computeLeapFrog(timeStep);
+		else if (m_iIntegrator == 2)
+			this->computeMidPoint(timeStep);
 		break;
 	}
 }
