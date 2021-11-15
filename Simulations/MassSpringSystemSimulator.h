@@ -1,5 +1,6 @@
 #ifndef MASSSPRINGSYSTEMSIMULATOR_h
 #define MASSSPRINGSYSTEMSIMULATOR_h
+#endif
 #include "Simulator.h"
 
 // Do Not Change
@@ -33,6 +34,7 @@ public:
 	void computeMidPoint(float timeStep);
 	void computeLeapFrog(float timeStep);
 	void buildSprings(int number);
+	void writeState();
 
 	// Specific Functions
 	void setMass(float mass);
@@ -86,4 +88,3 @@ private:
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
 };
-#endif

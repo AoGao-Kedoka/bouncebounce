@@ -1,7 +1,7 @@
 #include "MassSpringSystemSimulator.h"
 #include "stdexcept"
 
-#define WHITE {1,1,1}
+#define COLOR {0.3,0.3,0.6}
 
 //------------------------------
 // Constructor and Destructor
@@ -13,7 +13,7 @@ MassSpringSystemSimulator::MassSpringSystemSimulator() :m_fMass(10), m_fStiffnes
 	m_vGravity = Vec3(0, -10, 0);
 }
 
-MassSpringSystemSimulator::~MassSpringSystemSimulator(){
+MassSpringSystemSimulator::~MassSpringSystemSimulator() {
 	springs.clear();
 	masspoints.clear();
 }
@@ -34,10 +34,11 @@ float MassSpringSystemSimulator::calcDistance(Vec3 p1, Vec3 p2, Vec3* direction)
 std::pair<Vec3, Vec3> MassSpringSystemSimulator::calcAcc(Vec3 position1, Vec3 position2) {
 	Vec3 direction;
 	auto distance = this->calcDistance(position1, position2, &direction);
-	Vec3 force = m_fStiffness * (distance - m_frestLength) * (direction / distance);
+	Vec3 force = -m_fStiffness * (distance - m_frestLength) * (direction / distance);
 
-	Vec3 a1 = -force / m_fMass;
-	Vec3 a2 = force / m_fMass;
+	Vec3 a1 = force / m_fMass;
+	// because same mass and same forces => performance improvement
+	Vec3 a2 = -a1;
 	if (m_bGravityToogle) {
 		a1 += m_vGravity;
 		a2 += m_vGravity;
@@ -60,14 +61,21 @@ void MassSpringSystemSimulator::buildSprings(int number) {
 		addSpring(p1, p2, m_frestLength);
 	}
 	else {
-		for (int i = 0; i < number; i++) {
-			Vec3 position1 = Vec3(i, 0, 0);
-			Vec3 position2 = Vec3(i, 2, 0);
-			Vec3 velocity1 = { -1,0,0 };
-			Vec3 velocity2 = { 1,0,0 };
-			int p1 = addMassPoint(position1, velocity1, false);
-			int p2 = addMassPoint(position2, velocity2, false);
-			addSpring(p1, p2, m_frestLength);
+		for (int i = 0; i < number; i++)
+			for (int j = 0; j < number; j++)
+				addMassPoint(
+					Vec3(
+						(float)i / 2 - 0.4,
+						(float)j / 2 - 0.4,
+						0.f
+					),
+					Vec3(0, 0, 0),
+					false);
+
+		for (int i = 0; i < masspoints.size() - number; i++) {
+			if (!(i % number == 1))
+				addSpring(i, i + 1, m_frestLength);
+			addSpring(i, i + number, m_frestLength);
 		}
 	}
 }
@@ -85,15 +93,10 @@ void MassSpringSystemSimulator::computeEuler(float timeStep) {
 		auto acc = this->calcAcc(mp1->position, mp2->position);
 		mp1->velocity += timeStep * acc.first;
 		mp2->velocity += timeStep * acc.second;
-		if(mp1->position.y <= -1)
-			mp1->velocity = - mp1->velocity;
-		if(mp2->position.y <= -1)
-			mp2->velocity = - mp2->velocity;
-
-		std::cout << "Euler--" << "Masspoint1's position: " << mp1->position << std::endl;
-		std::cout << "Euler--" << "Masspoint2's position: " << mp2->position << std::endl;
-		std::cout << "Euler--" << "Masspoint1's velocity: " << mp1->velocity << std::endl;
-		std::cout << "Euler--" << "Masspoint2's velocity: " << mp1->velocity << std::endl;
+		if (mp1->position.y <= -1)
+			mp1->velocity = -mp1->velocity;
+		if (mp2->position.y <= -1)
+			mp2->velocity = -mp2->velocity;
 	}
 }
 
@@ -118,23 +121,19 @@ void MassSpringSystemSimulator::computeMidPoint(float timeStep) {
 		mp1->velocity += timeStep * acc.first;
 		mp2->velocity += timeStep * acc.second;
 
-		if(mp1->position.y <= -1)
-			mp1->velocity = - mp1->velocity;
-		if(mp2->position.y <= -1)
-			mp2->velocity = - mp2->velocity;
-
-		std::cout << "Midpoint--" << "Masspoint1's position: " << mp1->position << std::endl;
-		std::cout << "Midpoint--" << "Masspoint2's position: " << mp2->position << std::endl;
-		std::cout << "Midpoint--" << "Masspoint1's velocity: " << mp1->velocity << std::endl;
-		std::cout << "Midpoint--" << "Masspoint2's velocity: " << mp2->velocity << std::endl;
+		// bounce bounce!!!
+		if (mp1->position.y <= -1)
+			mp1->velocity = -mp1->velocity;
+		if (mp2->position.y <= -1)
+			mp2->velocity = -mp2->velocity;
 	}
 }
 
 void MassSpringSystemSimulator::computeLeapFrog(float timeStep) {
-	for(const auto& s : springs){
+	for (const auto& s : springs) {
 		auto* mp1 = &masspoints[s.masspoint1];
 		auto* mp2 = &masspoints[s.masspoint2];
-		
+
 		// update velocity first
 		auto acc = this->calcAcc(mp1->position, mp2->position);
 		mp1->velocity += timeStep * acc.first;
@@ -144,15 +143,17 @@ void MassSpringSystemSimulator::computeLeapFrog(float timeStep) {
 		mp1->position += timeStep * mp1->velocity;
 		mp2->position += timeStep * mp2->velocity;
 
-		if(mp1->position.y <= -1)
-			mp1->velocity = - mp1->velocity;
-		if(mp2->position.y <= -1)
-			mp2->velocity = - mp2->velocity;
+		if (mp1->position.y <= -1)
+			mp1->velocity = -mp1->velocity;
+		if (mp2->position.y <= -1)
+			mp2->velocity = -mp2->velocity;
+	}
+}
 
-		std::cout<< "LeapFrog--" << "Masspoint1's position: " << mp1->position << std::endl;
-		std::cout<< "LeapFrog--" << "Masspoint2's position: " << mp2->position << std::endl;
-		std::cout<< "LeapFrog--" << "Masspoint1's velocity: " << mp1->velocity << std::endl;
-		std::cout<< "LeapFrog--" << "Masspoint2's velocity: " << mp2->velocity << std::endl;
+void MassSpringSystemSimulator::writeState() {
+	for (int i = 0; i < masspoints.size(); i++) {
+		std::cout << "Masspoint " << i << "'s position: " << masspoints[i].position << std::endl;
+		std::cout << "Masspoint " << i << "'s velocity: " << masspoints[i].velocity << std::endl;
 	}
 }
 
@@ -160,24 +161,33 @@ void MassSpringSystemSimulator::computeLeapFrog(float timeStep) {
 // UI
 //------------------------------
 const char* MassSpringSystemSimulator::getTestCasesStr() {
-	return "DemoForTest, Demo1, Demo2, Demo3, Demo4, Demo5";
+	return "Demo 0: For testing, \
+            Demo 1: A simple one-step test, \
+            Demo 2: A simple Euler simulation, \
+            Demo 3: A simple Midpoint simulation, \
+            Demo 4: A complex simulation -- comparing stability of Euler and Midpoint,\
+			Demo 5: A simple Leap Frog simulation";
 }
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC) {
 	this->DUC = DUC;
 	TwRemoveVar(DUC->g_pTweakBar, "Timestep");
 	TwAddVarRO(DUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, &m_ftimeStep_Cur, "");
-	TwAddSeparator(DUC->g_pTweakBar, "SeperatorUp", "");
-	TwAddVarRW(DUC->g_pTweakBar, "Rest Length", TW_TYPE_FLOAT, &m_frestLength, "step = 0.2");
 	TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_BOOLCPP, &m_bGravityToogle, "");
 	if (m_iTestCase == 2 || m_iTestCase == 3 || m_iTestCase == 5) {
-		TwAddButton(DUC->g_pTweakBar, "Info", NULL, NULL, "label='0=Euler,1=Leap-Frog,2=Midpoint'");
+		TwAddButton(DUC->g_pTweakBar, "Info1", NULL, NULL, "label='0=Euler'");
+		TwAddButton(DUC->g_pTweakBar, "Info2", NULL, NULL, "label='1=Leap-Frog'");
+		TwAddButton(DUC->g_pTweakBar, "Info3", NULL, NULL, "label='2=Midpoint'");
 		TwAddVarRO(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "");
 	}
 	else if (m_iTestCase == 4) {
+		TwAddButton(DUC->g_pTweakBar, "Info1", NULL, NULL, "label='0=Euler'");
+		TwAddButton(DUC->g_pTweakBar, "Info2", NULL, NULL, "label='1=Leap-Frog'");
+		TwAddButton(DUC->g_pTweakBar, "Info3", NULL, NULL, "label='2=Midpoint'");
 		TwRemoveVar(DUC->g_pTweakBar, "Integrate");
-		TwAddButton(DUC->g_pTweakBar, "InfoComplex", NULL, NULL, "label='0=Euler,1=Leap-Frog,2=Midpoint'");
 		TwAddVarRW(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "min=0, max=2");
+		TwRemoveVar(DUC->g_pTweakBar, "Timestep");
+		TwAddVarRW(DUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, &m_ftimeStep_Cur, "min=0,step = 0.001");
 	}
 }
 
@@ -194,7 +204,7 @@ void MassSpringSystemSimulator::reset() {
 void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext) {
 	for (const auto& s : springs) {
 		DUC->beginLine();
-		DUC->drawLine(getPositionOfMassPoint(s.masspoint1), WHITE, getPositionOfMassPoint(s.masspoint2), WHITE);
+		DUC->drawLine(getPositionOfMassPoint(s.masspoint1), COLOR, getPositionOfMassPoint(s.masspoint2), COLOR);
 		DUC->endLine();
 		DUC->drawSphere(this->getPositionOfMassPoint(s.masspoint1), 0.05);
 		DUC->drawSphere(this->getPositionOfMassPoint(s.masspoint2), 0.05);
@@ -209,27 +219,27 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase) {
 		break;
 	case 1:
 		this->buildSprings(1);
-		std::cout << "Demo1" << std::endl;
+		std::cout << "Demo 1: A simple one-step test" << std::endl;
 		break;
 	case 2:
 		this->buildSprings(1);
-		m_iIntegrator = 0;
-		std::cout << "Demo2" << std::endl;
+		m_iIntegrator = EULER;
+		std::cout << "Demo 2: A simple Euler simulation" << std::endl;
 		break;
 	case 3:
-		m_iIntegrator = 2;
+		m_iIntegrator = MIDPOINT;
 		this->buildSprings(1);
-		std::cout << "Demo3" << std::endl;
+		std::cout << "Demo 3: A simple Midpoint simulation" << std::endl;
 		break;
 	case 4:
-		m_iIntegrator = 0;
+		m_iIntegrator = EULER;
 		this->buildSprings(10);
-		std::cout << "Demo4" << std::endl;
+		std::cout << "Demo 4: A complex simulation, comparing stability of Euler and Midpoint" << std::endl;
 		break;
 	case 5:
-		m_iIntegrator = 1;
+		m_iIntegrator = LEAPFROG;
 		this->buildSprings(1);
-		std::cout<< "Dmeo5" << std::endl;
+		std::cout << "Demo 5: A simple Leap-Frog simulation" << std::endl;
 		break;
 	default:
 		break;
@@ -248,30 +258,36 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed) {
 		Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
 		Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
 		// find a proper scale!
-		float inputScale = 0.001f;
+		float inputScale = 0.00001f;
 		inputWorld = inputWorld * inputScale;
-		//TODO: Update position
+		for (int i = 0; i < masspoints.size(); i++)
+			masspoints[i].position += inputWorld;
 	}
 }
 
 void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 	switch (m_iTestCase) {
 	case 0:
-		if (m_iIntegrator == 0)
+		if (m_iIntegrator == EULER)
 			this->computeEuler(timeStep);
-		else if (m_iIntegrator == 1)
+		else if (m_iIntegrator == LEAPFROG)
 			this->computeLeapFrog(timeStep);
-		else if (m_iIntegrator == 2)
+		else if (m_iIntegrator == MIDPOINT)
 			this->computeMidPoint(timeStep);
 		break;
 	case 1:
-		// only compute 1 time
+		// do only 1 iteration
 		m_ftimeStep_Cur = 0.1;
 		if (masspoints[springs[0].masspoint1].position.x == 0) {
 			this->computeEuler(m_ftimeStep_Cur);
+			std::cout << "-- Calculated with Euler method" << std::endl;
+			this->writeState();
 			this->reset();
-			if (masspoints[springs[0].masspoint1].position.x == 0)
+			if (masspoints[springs[0].masspoint1].position.x == 0) {
 				this->computeMidPoint(m_ftimeStep_Cur);
+				std::cout << "-- Calculated with Midpoint method" << std::endl;
+				this->writeState();
+			}
 		}
 		break;
 	case 2:
@@ -286,7 +302,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		m_ftimeStep_Cur = timeStep;
 		if (m_iIntegrator == 0)
 			this->computeEuler(m_ftimeStep_Cur);
-		else if(m_iIntegrator == 1)
+		else if (m_iIntegrator == 1)
 			this->computeLeapFrog(m_ftimeStep_Cur);
 		else if (m_iIntegrator == 2)
 			this->computeMidPoint(m_ftimeStep_Cur);
@@ -338,7 +354,7 @@ int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool i
 	masspoint.position = position;
 	masspoint.velocity = Velocity;
 	masspoint.isFixed = isFixed;
-	masspoints.emplace_back(masspoint);
+	masspoints.push_back(masspoint);
 	return masspoints.size() - 1;
 }
 
@@ -350,8 +366,9 @@ void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float 
 	spring.masspoint1 = masspoint1;
 	spring.masspoint2 = masspoint2;
 	spring.initialLength = initialLength;
-	springs.emplace_back(spring);
+	springs.push_back(spring);
 }
 
 void MassSpringSystemSimulator::applyExternalForce(Vec3 force) {
+	// makes no difference
 }
