@@ -131,14 +131,36 @@ void MassSpringSystemSimulator::computeMidPoint(float timeStep) {
 }
 
 void MassSpringSystemSimulator::computeLeapFrog(float timeStep) {
-	// TODO: not implemented yet
+	for(const auto& s : springs){
+		auto* mp1 = &masspoints[s.masspoint1];
+		auto* mp2 = &masspoints[s.masspoint2];
+		
+		// update velocity first
+		auto acc = this->calcAcc(mp1->position, mp2->position);
+		mp1->velocity += timeStep * acc.first;
+		mp2->velocity += timeStep * acc.second;
+
+		// update position then
+		mp1->position += timeStep * mp1->velocity;
+		mp2->position += timeStep * mp2->velocity;
+
+		if(mp1->position.y <= -1)
+			mp1->velocity = - mp1->velocity;
+		if(mp2->position.y <= -1)
+			mp2->velocity = - mp2->velocity;
+
+		std::cout<< "LeapFrog--" << "Masspoint1's position: " << mp1->position << std::endl;
+		std::cout<< "LeapFrog--" << "Masspoint2's position: " << mp2->position << std::endl;
+		std::cout<< "LeapFrog--" << "Masspoint1's velocity: " << mp1->velocity << std::endl;
+		std::cout<< "LeapFrog--" << "Masspoint2's velocity: " << mp2->velocity << std::endl;
+	}
 }
 
 //------------------------------
 // UI
 //------------------------------
 const char* MassSpringSystemSimulator::getTestCasesStr() {
-	return "DemoForTest, Demo1, Demo2, Demo3, Demo4";
+	return "DemoForTest, Demo1, Demo2, Demo3, Demo4, Demo5";
 }
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC) {
@@ -148,12 +170,12 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC) {
 	TwAddSeparator(DUC->g_pTweakBar, "SeperatorUp", "");
 	TwAddVarRW(DUC->g_pTweakBar, "Rest Length", TW_TYPE_FLOAT, &m_frestLength, "step = 0.2");
 	TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_BOOLCPP, &m_bGravityToogle, "");
-	if (m_iTestCase == 2 || m_iTestCase == 3) {
+	if (m_iTestCase == 2 || m_iTestCase == 3 || m_iTestCase == 5) {
 		TwAddVarRO(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "");
 	}
 	else if (m_iTestCase == 4) {
 		TwRemoveVar(DUC->g_pTweakBar, "Integrate");
-		TwAddVarRW(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "min=0, max=1");
+		TwAddVarRW(DUC->g_pTweakBar, "Integrate", TW_TYPE_INT8, &m_iIntegrator, "min=0, max=2");
 	}
 }
 
@@ -193,13 +215,20 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase) {
 		std::cout << "Demo2" << std::endl;
 		break;
 	case 3:
-		m_iIntegrator = 1;
+		m_iIntegrator = 2;
 		this->buildSprings(1);
 		std::cout << "Demo3" << std::endl;
 		break;
 	case 4:
+		m_iIntegrator = 0;
 		this->buildSprings(10);
 		std::cout << "Demo4" << std::endl;
+		break;
+	case 5:
+		m_iIntegrator = 1;
+		this->buildSprings(1);
+		std::cout<< "Dmeo5" << std::endl;
+		break;
 	default:
 		break;
 	}
@@ -253,8 +282,14 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		m_ftimeStep_Cur = timeStep;
 		if (m_iIntegrator == 0)
 			this->computeEuler(m_ftimeStep_Cur);
-		else if (m_iIntegrator == 1)
+		else if(m_iIntegrator == 1)
+			this->computeLeapFrog(m_ftimeStep_Cur);
+		else if (m_iIntegrator == 2)
 			this->computeMidPoint(m_ftimeStep_Cur);
+		break;
+	case 5:
+		m_ftimeStep_Cur = 0.005;
+		this->computeLeapFrog(m_ftimeStep_Cur);
 		break;
 	default:
 		m_ftimeStep_Cur = 0.1;
