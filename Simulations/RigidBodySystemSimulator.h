@@ -1,8 +1,6 @@
 #ifndef RIGIDBODYSYSTEMSIMULATOR_h
 #define RIGIDBODYSYSTEMSIMULATOR_h
 #include "Simulator.h"
-//add your header for your rigid body system, for e.g.,
-//#include "rigidBodySystem.h" 
 
 #define TESTCASEUSEDTORUNTEST 2
 
@@ -10,6 +8,7 @@ class RigidBodySystemSimulator:public Simulator{
 public:
 	// Construtors
 	RigidBodySystemSimulator();
+	~RigidBodySystemSimulator();
 	
 	// Functions
 	const char * getTestCasesStr();
@@ -32,12 +31,26 @@ public:
 	void setOrientationOf(int i,Quat orientation);
 	void setVelocityOf(int i, Vec3 velocity);
 
+	// Attribute
+	struct Rigidbody {
+		Vec3 center;
+		Vec3 size;
+		Vec3 velocity;
+		Quat orientation;
+		float mass;
+	};
+
+	// helper functions
+	void simulateRigid(Rigidbody r);
+	void buildRigid(int i);
+
 private:
 	// Attributes
-	// add your RigidBodySystem data members, for e.g.,
-	// RigidBodySystem * m_pRigidBodySystem; 
 	Vec3 m_externalForce;
+	Vec3 m_forcePosition;
 
+	// Container
+	std::vector<Rigidbody> rigids;
 	// UI Attributes
 	Point2D m_mouse;
 	Point2D m_trackmouse;
