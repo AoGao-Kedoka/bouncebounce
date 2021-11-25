@@ -3,6 +3,7 @@
 #define DF_POS {0, 0, 0}
 #define DF_SIZE {1, 0.6, 0.5}
 #define DF_M 2.0
+static int counter = 0;
 
 //----------------------------------------
 // Constructor and Destructor
@@ -83,8 +84,12 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){
 }
 
 void RigidBodySystemSimulator::simulateTimestep(float timeStep){
-	for (const auto& r : rigids) {
-		this->simulateRigid(r);
+	if (m_iTestCase == 1) {
+		if(counter == 0)
+			this->simulateRigid(2);
+	}
+	else {
+		this->simulateRigid(0.01);
 	}
 }
 
@@ -112,7 +117,9 @@ void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass){
 	r.center = position;
 	r.size = size;
 	r.mass = mass;
-	r.velocity = Vec3(0, 0, 0);
+	r.l_velocity = Vec3(0, 0, 0);
+	r.a_velocity = Vec3(0, 0, 0);
+	r.a_momentum = Vec3(0, 0, 0);
 	r.orientation = Quat(0);
 	rigids.push_back(r);
 }
@@ -122,7 +129,7 @@ void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation){
 }
 
 void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity){
-	this->rigids.at(i).velocity = velocity;
+	this->rigids.at(i).l_velocity = velocity;
 }
 
 
@@ -131,20 +138,58 @@ int RigidBodySystemSimulator::getNumberOfRigidBodies(){ return rigids.size(); }
 Vec3 RigidBodySystemSimulator::getPositionOfRigidBody(int i){ return rigids[i].center; }
 
 Vec3 RigidBodySystemSimulator::getLinearVelocityOfRigidBody(int i){
-	//TODO
-	return Vec3();
+	return this->rigids.at(i).l_velocity;
 }
 
 Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i){
-	//TODO
-	return Vec3();
+	return this->rigids.at(i).a_velocity;
 }
 
 //----------------------------------------
 // Helper Functions
 //----------------------------------------
-void RigidBodySystemSimulator::simulateRigid(Rigidbody r){
-	//TODO
+void RigidBodySystemSimulator::simulateRigid(float timeStep){
+	for (auto& r : rigids) {
+		// simulate roatation
+		if (counter == 0) {
+			/*
+				precomute if it's the first iteration
+				formel from wikipedia: https://en.wikipedia.org/wiki/List_of_moments_of_inertia
+				Matrix should look like this		
+					| iw	0	0  |
+				I =	| 0		ih	0  |
+					| 0		0	id |
+			*/
+			float iw = r.mass * (pow(r.size.z, 2) + pow(r.size.y, 2)) / 12;
+			float ih = r.mass * (pow(r.size.x, 2) + pow(r.size.z, 2)) / 12;
+			float id = r.mass * (pow(r.size.x, 2) + pow(r.size.y, 2)) / 12;
+			auto i0 = XMMatrixScaling(iw, ih, id);
+			auto inverse_i = XMMatrixInverse(nullptr, i0);
+			r.i_tensor = inverse_i;
+		}
+		// calculate torque q: xi X fi
+		Vec3 q = crossProduct(m_externalForce, m_forcePosition);
+		
+		// integrate the orientation r using the angular velocity
+		Quat tmp = (0, r.a_velocity.x, r.a_velocity.y, r.a_velocity.z);
+		r.orientation = timeStep * 0.5 * quatMul(tmp, r.orientation);
+		
+		// integrate angular momentum
+		r.a_momentum += timeStep * q;
+
+		// update Inertia Tensor
+		r.i_tensor= r.orientation.getRotMat().toDirectXMatrix() * 
+					r.i_tensor * XMMatrixTranspose(r.orientation.getRotMat().toDirectXMatrix());
+
+		// update angular velocity, no need to update all points because it will be handled in drawing
+		XMVECTOR angular = XMVector3Transform(r.a_momentum.toDirectXVector(), r.i_tensor);
+		r.a_velocity = angular;
+
+		// simulate translation with euler
+		r.center += timeStep * r.l_velocity;
+		Vec3 acc = m_externalForce / r.mass;
+		r.l_velocity += timeStep * acc;
+	}
 }
 
 void RigidBodySystemSimulator::buildRigid(int i) {
@@ -156,3 +201,19 @@ void RigidBodySystemSimulator::buildRigid(int i) {
 		//TODO
 	}
 }
+
+Vec3 RigidBodySystemSimulator::crossProduct(Vec3 a, Vec3 b) {
+	Vec3  ret;
+	ret.x = a.y * b.z - a.z * b.y;
+	ret.y = a.z * b.x - a.x * b.z;
+	ret.z = a.x * b.y - a.y * b.x;
+	return ret;
+}
+
+Quat RigidBodySystemSimulator::quatMul(Quat a, Quat b) {
+	Quat ret;
+	// TODO
+	return ret;
+}
+
+

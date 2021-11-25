@@ -30,19 +30,26 @@ public:
 	void addRigidBody(Vec3 position, Vec3 size, int mass);
 	void setOrientationOf(int i,Quat orientation);
 	void setVelocityOf(int i, Vec3 velocity);
+	void simulateRigid(float timeStep);
 
-	// Attribute
 	struct Rigidbody {
+		//translation
 		Vec3 center;
 		Vec3 size;
-		Vec3 velocity;
+		Vec3 l_velocity;
+
+		//rotation
+		XMMATRIX i_tensor;
+		Vec3 a_velocity;
+		Vec3 a_momentum;
 		Quat orientation;
 		float mass;
 	};
 
 	// helper functions
-	void simulateRigid(Rigidbody r);
 	void buildRigid(int i);
+	Vec3 crossProduct(Vec3 a, Vec3 b);
+	Quat quatMul(Quat a, Quat b);
 
 private:
 	// Attributes
