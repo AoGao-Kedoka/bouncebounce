@@ -29,6 +29,8 @@ public:
 	void setMass(float mass);
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
+	void setGravity(Vec3 g);
+	void setGravity(float x, float y, float z);
 	int addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed);
 	void addSpring(int masspoint1, int masspoint2, float initialLength);
 	int getNumberOfMassPoints();
@@ -43,11 +45,26 @@ public:
 	}
 
 private:
+	// Structs
+	struct MassPoint{
+		Vec3 p;
+		Vec3 v;
+		bool isFixed;
+		MassPoint(Vec3 p, Vec3 v, bool isFixed) : p(p), v(v), isFixed(isFixed) {};
+	}
 	// Data Attributes
 	float m_fMass;
 	float m_fStiffness;
 	float m_fDamping;
+	float m_fRestLength;
+	float m_fTimeStep;
+	bool m_bGravityOn;
+	Vec3 m_vGravity;
 	int m_iIntegrator;
+
+	// Containers
+	std::vector<MassPoint> masspoints;
+	std::vector<Spring> springs;
 
 	// UI Attributes
 	Vec3 m_externalForce;
