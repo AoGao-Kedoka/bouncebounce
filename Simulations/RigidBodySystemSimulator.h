@@ -49,6 +49,7 @@ public:
 	// helper functions
 	void buildRigid(int i);
 	Vec3 crossProduct(Vec3 a, Vec3 b);
+	float dotProduct(Vec3 a, Vec3 b);
 	Quat quatMul(Quat a, Quat b);
 
 private:

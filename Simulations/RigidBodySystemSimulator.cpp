@@ -3,6 +3,7 @@
 #define DF_POS {0, 0, 0}
 #define DF_SIZE {1, 0.6, 0.5}
 #define DF_M 2.0
+
 static int counter = 0;
 
 //----------------------------------------
@@ -11,8 +12,6 @@ static int counter = 0;
 RigidBodySystemSimulator::RigidBodySystemSimulator():
 	m_externalForce(Vec3{ 1, 1, 0 }), m_forcePosition(Vec3{0.3, 0.3, 0.25}) {
 	this->reset();
-	if (m_iTestCase != TESTCASEUSEDTORUNTEST)
-		this->buildRigid(1);
 }
 
 RigidBodySystemSimulator::~RigidBodySystemSimulator() {
@@ -58,21 +57,26 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase){
 	m_iTestCase = testCase;
 	switch (m_iTestCase) {
 	case 0:
+		counter = 0;
 		std::cout << "Demo for test usage" << std::endl;
 		break;
 	case 1:
+		counter = 0;
 		this->buildRigid(1);
 		std::cout << "Demo1" << std::endl;
 		break;
 	case 2:
+		counter = 0;
 		this->buildRigid(1);
 		std::cout << "Demo2" << std::endl;
 		break;
 	case 3:
+		counter = 0;
 		this->buildRigid(2);
 		std::cout << "Demo3" << std::endl;
 		break;
 	case 4:
+		counter = 0;
 		this->buildRigid(10);
 		std::cout << "Demo4" << std::endl;
 	}
@@ -85,8 +89,8 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){
 
 void RigidBodySystemSimulator::simulateTimestep(float timeStep){
 	if (m_iTestCase == 1) {
-		if(counter == 0)
-			this->simulateRigid(2);
+		if (counter == 0)
+			this->simulateRigid(0.01);
 	}
 	else {
 		this->simulateRigid(0.01);
@@ -120,7 +124,8 @@ void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass){
 	r.l_velocity = Vec3(0, 0, 0);
 	r.a_velocity = Vec3(0, 0, 0);
 	r.a_momentum = Vec3(0, 0, 0);
-	r.orientation = Quat(0);
+	// rotation z axis -90 degrees 
+	r.orientation = Quat(0.5,0.5,0.5,0.5);
 	rigids.push_back(r);
 }
 
@@ -166,6 +171,7 @@ void RigidBodySystemSimulator::simulateRigid(float timeStep){
 			auto i0 = XMMatrixScaling(iw, ih, id);
 			auto inverse_i = XMMatrixInverse(nullptr, i0);
 			r.i_tensor = inverse_i;
+			++counter;
 		}
 		// calculate torque q: xi X fi
 		Vec3 q = crossProduct(m_externalForce, m_forcePosition);
@@ -173,7 +179,8 @@ void RigidBodySystemSimulator::simulateRigid(float timeStep){
 		// integrate the orientation r using the angular velocity
 		Quat tmp = (0, r.a_velocity.x, r.a_velocity.y, r.a_velocity.z);
 		r.orientation = timeStep * 0.5 * quatMul(tmp, r.orientation);
-		
+		r.orientation /= r.orientation.norm();
+
 		// integrate angular momentum
 		r.a_momentum += timeStep * q;
 
@@ -184,11 +191,14 @@ void RigidBodySystemSimulator::simulateRigid(float timeStep){
 		// update angular velocity, no need to update all points because it will be handled in drawing
 		XMVECTOR angular = XMVector3Transform(r.a_momentum.toDirectXVector(), r.i_tensor);
 		r.a_velocity = angular;
+		std::cout << "Angular Velocity: " << r.a_velocity << std::endl;
 
 		// simulate translation with euler
 		r.center += timeStep * r.l_velocity;
 		Vec3 acc = m_externalForce / r.mass;
 		r.l_velocity += timeStep * acc;
+		std::cout << "Linear Velocity: " << r.l_velocity << std::endl;
+		std::cout << "Position: " << r.center << std::endl;
 	}
 }
 
@@ -210,9 +220,20 @@ Vec3 RigidBodySystemSimulator::crossProduct(Vec3 a, Vec3 b) {
 	return ret;
 }
 
+float RigidBodySystemSimulator::dotProduct(Vec3 a, Vec3 b) {
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
 Quat RigidBodySystemSimulator::quatMul(Quat a, Quat b) {
+	// perform quaternion multiplication
+	// S = S1 * S2 - v2 * v2
+	// V = S1 * v2 + S2 * v1 + v1 x v2
+	Vec3 v1 = Vec3(a.y, a.z, a.w);
+	Vec3 v2 = Vec3(b.y, b.z, b.w);
+	float scalar = a.x * b.x - dotProduct(v1, v2);
+	Vec3 vector = a.x * v2 + b.x * v1 + crossProduct(v1, v2);
 	Quat ret;
-	// TODO
+	ret.x = scalar, ret.y = vector.x, ret.z = vector.y, ret.w = vector.z;
 	return ret;
 }
 
