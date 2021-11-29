@@ -21,7 +21,7 @@ struct RigidBodyBox {
 	double depth;
 	double height;
 	Vec3 angularMomentum;
-	double mass;
+	int mass;
 	Quat orientation;
 	Vec3 totalForce; // acting on center of mass
 	bool isFixed = false;
@@ -64,6 +64,8 @@ public:
 	void addRigidBody(Vec3 position, Vec3 size, int mass);
 	void setOrientationOf(int i,Quat orientation);
 	void setVelocityOf(int i, Vec3 velocity);
+	// apply force on ith body, at point p with f force.
+	void applyForceOnBody(int i, Vec3 p, Vec3 f);
 
 
 private:

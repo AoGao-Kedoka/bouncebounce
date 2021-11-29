@@ -17,9 +17,10 @@ RigidBodySystemSimulator::RigidBodySystemSimulator()
 
 const char* RigidBodySystemSimulator::getTestCasesStr()
 {
-	return "Demo 1: Simple one-step test,\
-            Demo 2: Simple single body,\
-            Demo 3: multiple bodies colliding";
+	return "Demo 1: One-step simple test,\
+            Demo 2: Single simple body,\
+            Demo 3: Two rigid bodies colliding\
+            Demo 4: Multiple bodies";
 }
 
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -67,57 +68,48 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 {
     this->reset();
     switch (testCase) {
-
     // Single box falling over as seen on Sample Video 1
     case 0:
         m_fGravity = Vec3(0., 0., 0.);
 
         // addRigidBody(position, size, mass)
-        addRigidBody(Vec3(0.0, 0.2, 0.0), Vec3(.7, 1.5, .7), 1);
+        addRigidBody(Vec3(0.0, 0.2, 0.0), Vec3(.7, 1.5, .7), 2);
         
         //forcePushingOnCorner
+        Boxes[0].angularMomentum = Vec3(1., 1., 1.);
+        Boxes[0].orientation = Quat(Vec3(0, 1, 1), M_PI);
+        Boxes[0].linearVelocity = Vec3(0, 0, 0);
         
-        forces.emplace_back(
-            Vec3(0.001, 0.001, 0.002), // the force
-            Vec3(.1, .1, .1),    // p point where it's acting
-            0                    // nr of body it's acting on
-        );
         break;
-
     
     case 1:
-        
-        m_fGravity = Vec3(0, -9.0f, 0);
+        m_fGravity = Vec3(.0, .0, .0);
 
-        addRigidBody(Vec3(-1.0, 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[0].orientation = Quat(Vec3(0, 1, 1), M_PI_2);
-        (this->Boxes)[0].linearVelocity = Vec3(0.2, 0, 0);
-        addRigidBody(Vec3(1.0, 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[1].orientation = Quat(Vec3(0, 1, 0), M_PI_2);
-        (this->Boxes)[1].linearVelocity = Vec3(-0.2, 0, 0);
-        addRigidBody(Vec3(-1.0, 1.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[2].orientation = Quat(Vec3(0, 1, 0), M_PI_2);
-        (this->Boxes)[2].linearVelocity = Vec3(-0.2, 0, 0);
-        addRigidBody(Vec3(1.0, 1.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[3].orientation = Quat(Vec3(1, 1, 0), M_PI_2);
-        (this->Boxes)[3].linearVelocity = Vec3(-0.2, 0, 0);
+        addRigidBody(Vec3(-0.7, 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
+        Boxes[0].orientation = Quat(Vec3(0, 1, 1), M_PI_2);
+        Boxes[0].linearVelocity = Vec3(0.4, 0, 0);
+
+        addRigidBody(Vec3(0.7, 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
+        Boxes[1].orientation = Quat(Vec3(0, 1, 0), M_PI_2/4);
+        Boxes[1].linearVelocity = Vec3(-0.4, 0, 0);
+        
         break;
 
     case 2:
         m_fGravity = Vec3(0, -9.0f, 0);
 
-        addRigidBody(Vec3(-1.0, 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[0].orientation = Quat(Vec3(0, 1, 1), M_PI_2);
-        (this->Boxes)[0].linearVelocity = Vec3(0.2, 0, 0);
-        addRigidBody(Vec3(1.0, 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[1].orientation = Quat(Vec3(0, 1, 0), M_PI_2);
-        (this->Boxes)[1].linearVelocity = Vec3(-0.2, 0, 0);
-        addRigidBody(Vec3(-1.0, 1.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[2].orientation = Quat(Vec3(0, 1, 0), M_PI_2);
-        (this->Boxes)[2].linearVelocity = Vec3(-0.2, 0, 0);
-        addRigidBody(Vec3(1.0, 1.0, 0.0), Vec3(0.5, 0.5, 0.5), 2);
-        (this->Boxes)[3].orientation = Quat(Vec3(1, 1, 0), M_PI_2);
-        (this->Boxes)[3].linearVelocity = Vec3(-0.2, 0, 0);
+        addRigidBody(Vec3(-1., 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 1);
+        Boxes[0].orientation = Quat(Vec3(0, 1, 1), M_PI_2);
+        Boxes[0].linearVelocity = Vec3(-0.1, 0, 0);
+        addRigidBody(Vec3(0.7, 0.0, 0.0), Vec3(0.5, 0.5, 0.5), 1);
+        Boxes[1].orientation = Quat(Vec3(0, 1, 0), -M_PI_2);
+        Boxes[1].linearVelocity = Vec3(-0.1, 0, 0);
+        addRigidBody(Vec3(0.7, 1., 0.0), Vec3(0.5, 0.5, 0.5), 1);
+        Boxes[2].orientation = Quat(Vec3(0, 1, 0), M_PI_2);
+        Boxes[2].linearVelocity = Vec3(-0.1, 0, 0);
+        addRigidBody(Vec3(-1., 1, 0.0), Vec3(0.5, 0.5, 0.5), 1);
+        Boxes[3].orientation = Quat(Vec3(1, 1, 0), -M_PI_2);
+        Boxes[3].linearVelocity = Vec3(0.1, 0, 0);
         break;
     }
 }
@@ -223,19 +215,22 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
     for (int i = 0; i < Boxes.size(); i++) {
         for (int j = i + 1; j < Boxes.size(); j++) {
             CollisionInfo collisionInfo = checkCollisionSAT(Boxes[i].worldMatrix, Boxes[j].worldMatrix);
-            calcImpulse(collisionInfo, Boxes[i], Boxes[j], 1);
+            calcImpulse(collisionInfo, Boxes[i], Boxes[j], 0);
         }
     }
     
-
+    forces.clear();
 }
 
 void RigidBodySystemSimulator::calcImpulse(CollisionInfo info, RigidBodyBox& rb1, RigidBodyBox& rb2, int c) {
     // nothing to do if there is no collision
     if (!info.isValid) return;
+    Vec3 posA = info.collisionPointWorld - rb1.position;
+    Vec3 posB = info.collisionPointWorld - rb2.position;
+
     //Calculate v_i for the Collision Point for both objects
-    Vec3 velA = rb1.linearVelocity + cross(rb1.angularVelocity, info.collisionPointWorld);
-    Vec3 velB = rb2.linearVelocity + cross(rb2.angularVelocity, info.collisionPointWorld);
+    Vec3 velA = rb1.linearVelocity + cross(rb1.angularVelocity, posA);
+    Vec3 velB = rb2.linearVelocity + cross(rb2.angularVelocity, posB);
     Vec3 velRel = (velA - velB);
 
     // return if the objects are not moving towards each other
@@ -246,6 +241,9 @@ void RigidBodySystemSimulator::calcImpulse(CollisionInfo info, RigidBodyBox& rb1
 
     double INumerator = -(1 + c) * dot(velRel, info.normalWorld);
 
+    // TODO For the next 4 calculations, we feel like we should use posA and posB
+    // for local positions, but that way the simulation explodes. 
+    // Using world positions seems to be fine though.
     Vec3 crossproduct1 = cross(rb1.position, info.normalWorld);
     Vec3 crossproduct2 = cross(rb2.position, info.normalWorld);
 
@@ -280,6 +278,11 @@ void RigidBodySystemSimulator::calcImpulse(CollisionInfo info, RigidBodyBox& rb1
     rb2.angularMomentum -= cross(rb2.position, (J * info.normalWorld));
     
 }
+
+void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 p, Vec3 f) {
+    forces.emplace_back(f, p, i);
+}
+
 
 void RigidBodySystemSimulator::onClick(int x, int y)
 {

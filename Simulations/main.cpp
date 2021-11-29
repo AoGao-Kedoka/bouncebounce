@@ -30,10 +30,10 @@ using namespace GamePhysics;
 #include "TemplateSimulator.h"
 #endif
 #ifdef MASS_SPRING_SYSTEM
-#include "MassSpringSystemSimulator.h"
+//#include "MassSpringSystemSimulator.h"
 #endif
 #ifdef RIGID_BODY_SYSTEM
-//#include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
 #endif
 #ifdef SPH_SYSTEM
 //#include "SPHSystemSimulator.h"
