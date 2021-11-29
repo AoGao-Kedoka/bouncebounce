@@ -125,7 +125,8 @@ void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass){
 	r.a_velocity = Vec3(0, 0, 0);
 	r.a_momentum = Vec3(0, 0, 0);
 	// rotation z axis -90 degrees 
-	r.orientation = Quat(0.5,0.5,0.5,0.5);
+	// source: https://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToQuaternion/steps/index.htm
+	r.orientation = Quat(0.71,0.71,0,0);
 	rigids.push_back(r);
 }
 
