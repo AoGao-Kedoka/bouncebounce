@@ -12,6 +12,7 @@
 //--------------------------------------------------------------------------------------
 
 #include "VertexTypes.h"
+#include <stdexcept>
 
 namespace DirectX
 {

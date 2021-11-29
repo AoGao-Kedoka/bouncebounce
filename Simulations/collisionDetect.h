@@ -1,6 +1,9 @@
 ﻿// header file:
 #include <DirectXMath.h>
 #include <Vector>
+#include <cmath>
+#include <iostream>
+#include "util/vectorbase.h"
 using namespace DirectX;
 
 // the return structure, with these values, you should be able to calculate the impulse
@@ -63,7 +66,7 @@ namespace collisionTools{
 		results.push_back(centerWorld - edges[0] - edges[1] + edges[2]);
 		results.push_back(centerWorld + edges[0] - edges[1] + edges[2]); //this +,-,+
 		results.push_back(centerWorld - edges[0] + edges[1] + edges[2]); //this -,+,+
-		results.push_back(centerWorld + edges[0] + edges[1] + edges[2]);//this +,+,+
+		results.push_back(centerWorld + edges[0] + edges[1] + edges[2]); //this +,+,+
 		return results;
 	}
 
