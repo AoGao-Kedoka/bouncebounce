@@ -8,11 +8,17 @@
 class Grid {
 public:
 	// Construtors
-	Grid();
-
+	Grid(int m, int n);
+	int getM();
+	int getN();
+	float getTemperature(int l, int w);
+	void setTemperatur(int l, int w, double value);
 
 private:
 	// Attributes
+	int _m;
+	int _n;
+	std::vector<std::vector<double>> _temperature;
 };
 
 
@@ -34,8 +40,8 @@ public:
 	void onMouse(int x, int y);
 	// Specific Functions
 	void drawObjects();
-	Grid* diffuseTemperatureExplicit();
-	void diffuseTemperatureImplicit();
+	Grid* diffuseTemperatureExplicit(float timeStep);
+	void diffuseTemperatureImplicit(float timeStep);
 
 private:
 	// Attributes
@@ -46,6 +52,7 @@ private:
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
 	Grid *T; //save results of every time step
+	double alpha;
 };
 
 #endif
