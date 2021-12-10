@@ -52,7 +52,7 @@ private:
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
 	Grid *T; //save results of every time step
-	double alpha = 1;
+	double alpha = 0.3;
 };
 
 #endif

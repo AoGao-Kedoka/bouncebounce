@@ -3,14 +3,20 @@
 using namespace std;
 
 Grid::Grid(int m, int n) : _m{ m }, _n{ n } {
+	std::random_device d;
+	std::mt19937 rng(d());
+	std::uniform_real_distribution<> dist(-1, 1);
 	for (int i = 0; i < m; ++i) {
 		std::vector<double> temp;
 		for (int j = 0; j < n; ++j) {
-			temp.push_back(1);
+			if (i == 0 || j == 0 || i == m - 1 || j == n - 1)
+				temp.push_back(0);
+			else {
+				temp.push_back(dist(rng));
+			}
 		}
 		_temperature.push_back(temp);
 	}
-	_temperature.at(1).at(2) = -400;
 }
 
 int Grid::getM() { return _m; }
@@ -180,7 +186,9 @@ void DiffusionSimulator::drawObjects()
 			}
 			else {
 				double t = T->getTemperature(i, j);
-				DUC->setUpLighting(Vec3(), Vec3(t, 0, -t), 10, Vec3(t, 0, -t));
+				DUC->setUpLighting(abs(T->getTemperature(i,j)) * Vec3(1, T->getTemperature(i, j)>0? 1:0, 
+									T->getTemperature(i, j) > 0 ? 1 : 0), 0.4 * Vec3(1, 1, 1),
+									10, abs(T->getTemperature(i, j)) * Vec3(1,1,1));
 			}
 			DUC->drawSphere(Vec3(0.05 * (i - m / 2), 0.05 * (j - n / 2), 0), Vec3(0.05, 0.05, 0.05));
 		}
