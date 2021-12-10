@@ -15,13 +15,13 @@ Grid::Grid(int m, int n) : _m{ m }, _n{ n } {
 
 int Grid::getM() { return _m; }
 int Grid::getN() { return _n; }
-float Grid::getTemperature(int l, int w) { 
+float Grid::getTemperature(int l, int w) {
 	if (l < _m || w < _n)
 		return _temperature.at(l).at(w);
 	else
 		throw std::invalid_argument("m or n too big");
 }
-void Grid::setTemperatur(int l, int w, double value) { 
+void Grid::setTemperatur(int l, int w, double value) {
 	if (l < _m || w < _n)
 		_temperature.at(l).at(w) = value;
 	else
@@ -38,18 +38,18 @@ DiffusionSimulator::DiffusionSimulator()
 	// to be implemented
 }
 
-const char * DiffusionSimulator::getTestCasesStr(){
+const char* DiffusionSimulator::getTestCasesStr() {
 	return "Explicit_solver, Implicit_solver";
 }
 
-void DiffusionSimulator::reset(){
-		m_mouse.x = m_mouse.y = 0;
-		m_trackmouse.x = m_trackmouse.y = 0;
-		m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
+void DiffusionSimulator::reset() {
+	m_mouse.x = m_mouse.y = 0;
+	m_trackmouse.x = m_trackmouse.y = 0;
+	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
 
 }
 
-void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
+void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
 	// to be implemented
@@ -81,19 +81,18 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 }
 
 Grid* DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {//add your own parameters
-	 for (int i = 1; i < T->getM() -1; i++) {
-	 	for (int j = 1; j < T->getN() -1; j++) {
-	 			/*
-	 					  d^2u   d^2u
-	 				t =	 (---- + ---- ) * timeStep * alpha + currentT
-	 					  dx^2   dy^2
-	 			*/
-				float currentT = T->getTemperature(i, j);
-				float centralDiffX = T->getTemperature(i + 1, j) + T->getTemperature(i - 1, j) - 2 * T->getTemperature(i, j);
-	 			float centralDiffY = T->getTemperature(i, j + 1) + T->getTemperature(i, j - 1) - 2 * T->getTemperature(i, j);
-	 			T->setTemperatur(i, j, currentT + alpha * (centralDiffX + centralDiffY) * timeStep);
-	 	}
-	 }
+	for (int i = 1; i < T->getM() - 1; i++) {
+		for (int j = 1; j < T->getN() - 1; j++) {
+			/*
+					  d^2u   d^2u
+				t =	 (---- + ---- ) * timeStep * alpha + temperature
+					  dx^2   dy^2
+			*/
+			float centralDiffX = T->getTemperature(i + 1, j) + T->getTemperature(i - 1, j) - 2 * T->getTemperature(i, j);
+			float centralDiffY = T->getTemperature(i, j + 1) + T->getTemperature(i, j - 1) - 2 * T->getTemperature(i, j);
+			T->setTemperatur(i, j, T->getTemperature(i, j) + alpha * (centralDiffX + centralDiffY) * timeStep);
+		}
+	}
 	return T;
 }
 
@@ -118,7 +117,7 @@ void setupA(SparseMatrix<Real>& A, double factor) {//add your own parameters
 	// if needed, read with: A(index1, index2);
 	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
 	for (int i = 0; i < 25; i++) {
-			A.set_element(i, i, 1); // set diagonal
+		A.set_element(i, i, 1); // set diagonal
 	}
 }
 
@@ -127,8 +126,8 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {//add your 
 	// solve A T = b
 	// to be implemented
 	const int N = 25;//N = sizeX*sizeY*sizeZ
-	SparseMatrix<Real> *A = new SparseMatrix<Real> (N);
-	std::vector<Real> *b = new std::vector<Real>(N);
+	SparseMatrix<Real>* A = new SparseMatrix<Real>(N);
+	std::vector<Real>* b = new std::vector<Real>(N);
 
 	setupA(*A, 0.1);
 	setupB(*b);
@@ -176,15 +175,12 @@ void DiffusionSimulator::drawObjects()
 	int n = T->getN();
 	for (int i = 0; i < m; ++i) {
 		for (int j = 0; j < n; ++j) {
-			if (i == 0 || j == 0 || i == m - 1 || j == n -1) {
-				DUC->setUpLighting(Vec3(), Vec3(0, 0, 0), 50, Vec3(0, 0, 0));
+			if (i == 0 || j == 0 || i == m - 1 || j == n - 1) {
+				DUC->setUpLighting(Vec3(), Vec3(0, 0, 0), 10, Vec3(0, 0, 0));
 			}
 			else {
 				double t = T->getTemperature(i, j);
-				if (t > 0)
-					DUC->setUpLighting(Vec3(), Vec3(1, 1, 1), 20, Vec3(1, 1, 1));
-				else
-					DUC->setUpLighting(Vec3(), Vec3(-t, 0, 0), 20, Vec3(-t, 0, 0));
+				DUC->setUpLighting(Vec3(), Vec3(t, 0, -t), 10, Vec3(t, 0, -t));
 			}
 			DUC->drawSphere(Vec3(0.05 * (i - m / 2), 0.05 * (j - n / 2), 0), Vec3(0.05, 0.05, 0.05));
 		}
