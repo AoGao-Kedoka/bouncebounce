@@ -186,9 +186,10 @@ void DiffusionSimulator::drawObjects()
 			}
 			else {
 				double t = T->getTemperature(i, j);
-				DUC->setUpLighting(abs(T->getTemperature(i,j)) * Vec3(1, T->getTemperature(i, j)>0? 1:0, 
-									T->getTemperature(i, j) > 0 ? 1 : 0), 0.4 * Vec3(1, 1, 1),
-									10, abs(T->getTemperature(i, j)) * Vec3(1,1,1));
+				DUC->setUpLighting(abs(T->getTemperature(i,j)) * 
+									Vec3(1, T->getTemperature(i, j)>0? 1:0, T->getTemperature(i, j) > 0 ? 1 : 0), 
+									0.4 * Vec3(1, 1, 1),10,
+									abs(T->getTemperature(i, j)) * Vec3(1,1,1));
 			}
 			DUC->drawSphere(Vec3(0.05 * (i - m / 2), 0.05 * (j - n / 2), 0), Vec3(0.05, 0.05, 0.05));
 		}
