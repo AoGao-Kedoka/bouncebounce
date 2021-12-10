@@ -10,7 +10,7 @@ Grid::Grid(int m, int n) : _m{ m }, _n{ n } {
 		}
 		_temperature.push_back(temp);
 	}
-	_temperature.at(1).at(2) = -1;
+	_temperature.at(1).at(2) = -400;
 }
 
 int Grid::getM() { return _m; }
@@ -53,6 +53,7 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
 	this->DUC = DUC;
 	// to be implemented
+	TwAddVarRW(DUC->g_pTweakBar, "alpha", TW_TYPE_DOUBLE, &this->alpha, "min=0, step=0.2");
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -80,21 +81,17 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 }
 
 Grid* DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {//add your own parameters
-	 for (int i = 0; i < T->getM(); i++) {
-	 	for (int j = 0; j < T->getN(); j++) {
-	 		if (i == 0 || j == 0 || i == T->getM() -1 || j == T->getN() -1) {
-	 		}
-	 		else {
+	 for (int i = 1; i < T->getM() -1; i++) {
+	 	for (int j = 1; j < T->getN() -1; j++) {
 	 			/*
-	 					du             d^2u   d^2u
-	 				t =	--  -  alpha * ---- + ----
-	 					dt			   dx^2   dy^2
+	 					  d^2u   d^2u
+	 				t =	 (---- + ---- ) * timeStep * alpha + currentT
+	 					  dx^2   dy^2
 	 			*/
-	 			float forwardDiff = (T->getTemperature(i, j) - T->getTemperature(i + 1, j)) / timeStep;
-	 			float centralDiffX = (T->getTemperature(i + 1, j) + T->getTemperature(i - 1, j) - 2 * T->getTemperature(i, j)) / 2;
-	 			float centralDiffY = (T->getTemperature(i + 1, j) + T->getTemperature(i - 1, j) - 2 * T->getTemperature(i, j)) / 2;
-	 			T->setTemperatur(i, j, forwardDiff - alpha * centralDiffX * centralDiffY);
-	 		}
+				float currentT = T->getTemperature(i, j);
+				float centralDiffX = T->getTemperature(i + 1, j) + T->getTemperature(i - 1, j) - 2 * T->getTemperature(i, j);
+	 			float centralDiffY = T->getTemperature(i, j + 1) + T->getTemperature(i, j - 1) - 2 * T->getTemperature(i, j);
+	 			T->setTemperatur(i, j, currentT + alpha * (centralDiffX + centralDiffY) * timeStep);
 	 	}
 	 }
 	return T;
