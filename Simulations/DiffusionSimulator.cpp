@@ -87,19 +87,24 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 }
 
 Grid* DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {//add your own parameters
-	for (int i = 1; i < T->getM() - 1; i++) {
-		for (int j = 1; j < T->getN() - 1; j++) {
-			/*
-					  d^2u   d^2u
-				t =	 (---- + ---- ) * timeStep * alpha + temperature
-					  dx^2   dy^2
-			*/
-			float centralDiffX = T->getTemperature(i + 1, j) + T->getTemperature(i - 1, j) - 2 * T->getTemperature(i, j);
-			float centralDiffY = T->getTemperature(i, j + 1) + T->getTemperature(i, j - 1) - 2 * T->getTemperature(i, j);
-			T->setTemperatur(i, j, T->getTemperature(i, j) + alpha * (centralDiffX + centralDiffY) * timeStep);
+	Grid* newT = new Grid(T->getM(), T->getN());
+	for (int i = 0; i < T->getM(); ++i) {
+		for (int j = 0; j < T->getN(); ++j) {
+			if(i == 0 || j == 0 || i == T->getM() - 1 || j == T->getN() - 1){
+				newT->setTemperatur(i, j, T->getTemperature(i, j));
+			} else {
+				/*
+						  d^2u   d^2u
+					t =	 (---- + ---- ) * timeStep * alpha + temperature
+						  dx^2   dy^2
+				*/
+				float centralDiffX = T->getTemperature(i + 1, j) + T->getTemperature(i - 1, j) - 2 * T->getTemperature(i, j);
+				float centralDiffY = T->getTemperature(i, j + 1) + T->getTemperature(i, j - 1) - 2 * T->getTemperature(i, j);
+				newT->setTemperatur(i, j, T->getTemperature(i, j) + alpha * (centralDiffX + centralDiffY) * timeStep);
+			}
 		}
 	}
-	return T;
+	return newT;
 }
 
 void setupB(std::vector<Real>& b) {//add your own parameters
@@ -164,9 +169,12 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{
-	case 0:
+	case 0: {
+		auto temp = T;
 		T = diffuseTemperatureExplicit(timeStep);
+		delete(temp);
 		break;
+	}
 	case 1:
 		diffuseTemperatureImplicit(timeStep);
 		break;
