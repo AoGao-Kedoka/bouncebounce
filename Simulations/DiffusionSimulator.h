@@ -3,15 +3,31 @@
 
 #include "Simulator.h"
 #include "vectorbase.h"
+#include "pcgsolver.h"
 #include <vector>
+#include <tuple>
+class Grid3d {
+public:
+	// Construtors
+	Grid3d(int x = 15, int y = 15, int z = 15);
+
+	std::vector<std::vector<std::vector<Real>>> gridData;
+	void setDimensions(std::tuple<int, int, int> dim3D);
+private:
+	// Attributes
+	int m;
+	int n;
+	int p;
+};
+
 
 //impement your own grid class for saving grid data
 class Grid {
 public:
 	// Construtors
-	Grid();
+	Grid(int x = 15, int y = 15);
 
-	std::vector<std::vector<float>> gridData;
+	std::vector<std::vector<Real>> gridData;
 	void setDimensions(std::pair<int, int> dim2D);
 private:
 	// Attributes
@@ -21,10 +37,10 @@ private:
 
 class Parameters {
 public:
-	Parameters(							float upperCenter,
-						float centerLeft, float center, float centerRight,
-													float lowerCenter,
-						int deltaM,      int deltaN, float timeStep
+	Parameters(Real upperCenter,
+		Real centerLeft, Real center, Real centerRight,
+		Real lowerCenter,
+						int deltaM,      int deltaN, Real timeStep
 					) :
 		upperCenter{ upperCenter }, 
 		centerLeft{ centerLeft }, center{ center }, centerRight{ centerRight },
@@ -32,13 +48,35 @@ public:
 		deltaM{ deltaM }, deltaN { deltaN }, timeStep{timeStep}
 {}
 
-	float upperCenter;
-	float centerLeft;	float center;	float centerRight;
-	float lowerCenter;
+	Real upperCenter;
+	Real centerLeft;	Real center;	Real centerRight;
+	Real lowerCenter;
 
-	int deltaM; int deltaN; float timeStep;
+	int deltaM; int deltaN; Real timeStep;
 };
 
+class Parameters3d{
+public:
+	Parameters3d(Real upperCenter,
+		Real centerLeft, Real center, Real centerRight,
+		Real lowerCenter,
+		Real forwardDepth, Real backwardDepth,
+		int deltaM, int deltaN, int deltaP, Real timeStep
+	) :
+		upperCenter{ upperCenter },
+		centerLeft{ centerLeft }, center{ center }, centerRight{ centerRight },
+		lowerCenter{ lowerCenter },
+		forwardDepth{ forwardDepth }, backwardDepth{ backwardDepth },
+		deltaM{ deltaM }, deltaN{ deltaN }, deltaP{ deltaP }, timeStep{ timeStep }
+	{}
+
+	Real upperCenter;
+	Real centerLeft;	Real center;	Real centerRight;
+	Real lowerCenter;
+	Real forwardDepth; Real backwardDepth;
+
+	int deltaM; int deltaN; int deltaP; Real timeStep;
+};
 
 class DiffusionSimulator:public Simulator{
 public:
@@ -57,12 +95,25 @@ public:
 	void onMouse(int x, int y);
 	// Specific Functions
 	void drawObjects();
-	float updateValuesExplicit(Parameters& param);
+
+	Real updateValuesExplicit(Parameters& param);
+	Real updateValuesExplicit3d(Parameters3d& param);
+
 	Grid* diffuseTemperatureExplicit();
+	Grid3d* diffuseTemperatureExplicit3d();
+
 	void diffuseTemperatureImplicit();
+	void diffuseTemperatureImplicit3d();
+
 
 	//void assignValues(size_t index_row, size_t index_column, Parameters new_val);
+	void setupA(SparseMatrix<Real>& A, double factor);
+	void setupB(std::vector<Real>& b);
+	void fillT(std::vector<Real>& x);
 
+	void setupA3d(SparseMatrix<Real>& A, double factor);
+	void setupB3d(std::vector<Real>& b);
+	void fillT3d(std::vector<Real>& x);
 private:
 	// Attributes
 	Vec3  m_vfMovableObjectPos;
@@ -71,9 +122,11 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
-	Grid *T; //save results of every time step
-	float alpha = 0.3;//diffusion coef
-	bool called = false;
+
+	Grid *T = nullptr; //save results of every time step
+	Grid3d* d3T=nullptr;
+
+	Real alpha = 0.3;//diffusion coef
 };
 
 #endif
