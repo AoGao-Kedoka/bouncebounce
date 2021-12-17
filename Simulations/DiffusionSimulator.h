@@ -27,6 +27,7 @@ class DiffusionSimulator:public Simulator{
 public:
 	// Construtors
 	DiffusionSimulator();
+	~DiffusionSimulator();
 
 	// Functions
 	const char * getTestCasesStr();

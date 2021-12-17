@@ -44,6 +44,10 @@ DiffusionSimulator::DiffusionSimulator()
 	// to be implemented
 }
 
+DiffusionSimulator::~DiffusionSimulator() {
+	delete(T);
+}
+
 const char* DiffusionSimulator::getTestCasesStr() {
 	return "Explicit_solver, Implicit_solver";
 }
@@ -107,10 +111,10 @@ Grid* DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {//add your
 	return newT;
 }
 
-void setupB(std::vector<Real>& b) {//add your own parameters
+void setupB(std::vector<Real>& b, Grid* T) {//add your own parameters
 	// to be implemented
 	//set vector B[sizeX*sizeY]
-	for (int i = 0; i < 25; i++) {
+	for (int i = 0; i < T->getM() * T->getN(); i++) {
 		b.at(i) = 0;
 	}
 }
@@ -121,13 +125,14 @@ void fillT(Grid* T) {//add your own parameters
 	//make sure that the temperature in boundary cells stays zero
 }
 
-void setupA(SparseMatrix<Real>& A, double factor) {//add your own parameters
+void setupA(SparseMatrix<Real>& A, double factor, Grid* T) {//add your own parameters
 	// to be implemented
 	//setup Matrix A[sizeX*sizeY*sizeZ, sizeX*sizeY*sizeZ]
 	// set with:  A.set_element( index1, index2 , value );
 	// if needed, read with: A(index1, index2);
 	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-	for (int i = 0; i < 25; i++) {
+	int l = T->getM() * T->getN();
+	for (int i = 0; i < l; ++i) {
 		A.set_element(i, i, 1); // set diagonal
 	}
 }
@@ -136,12 +141,12 @@ void setupA(SparseMatrix<Real>& A, double factor) {//add your own parameters
 void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {//add your own parameters
 	// solve A T = b
 	// to be implemented
-	const int N = 25;//N = sizeX*sizeY*sizeZ
+	const int N = T->getN() * T->getM();//N = sizeX*sizeY*sizeZ
 	SparseMatrix<Real>* A = new SparseMatrix<Real>(N);
 	std::vector<Real>* b = new std::vector<Real>(N);
 
-	setupA(*A, 0.1);
-	setupB(*b);
+	setupA(*A, 0.1, T);
+	setupB(*b, T);
 
 	// perform solve
 	Real pcg_target_residual = 1e-05;
