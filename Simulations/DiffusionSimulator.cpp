@@ -291,7 +291,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {//add your 
 
 	// setupA(a, factor)
 	// factor is this->alpha * timestep
-	this->setupA(*A, 0.005);
+	this->setupA(*A, alpha * timeStep);
 	setupB(*b);
 
 	// perform solve
@@ -407,7 +407,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit3d(float timeStep) {
 
 	// setupA(a, factor)
 	// factor is this->alpha * timestep
-	this->setupA3d(*A, 0.01);
+	this->setupA3d(*A, alpha * timeStep);
 	setupB3d(*b);
 
 	// perform solve
