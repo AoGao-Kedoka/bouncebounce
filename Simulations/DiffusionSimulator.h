@@ -13,13 +13,18 @@ public:
 
 	std::vector<std::vector<std::vector<Real>>> gridData;
 	void setDimensions(std::tuple<int, int, int> dim3D);
+	// new dimensions
+	void resize(std::tuple<int, int, int> dim3D);
 private:
 	// Attributes
 	int m;
 	int n;
 	int p;
-};
+	std::random_device rd;
+	std::mt19937 e2;
+	std::uniform_real_distribution<Real> dist;
 
+};
 
 //impement your own grid class for saving grid data
 class Grid {
@@ -29,10 +34,16 @@ public:
 
 	std::vector<std::vector<Real>> gridData;
 	void setDimensions(std::pair<int, int> dim2D);
+	void resize(std::pair<int, int> dim2D);
+
 private:
 	// Attributes
 	int m;
 	int n;
+
+	std::random_device rd;
+	std::mt19937 e2;
+	std::uniform_real_distribution<Real> dist;
 };
 
 class Parameters {
@@ -76,7 +87,7 @@ class DiffusionSimulator:public Simulator{
 public:
 	// Construtors
 	DiffusionSimulator();
-
+	~DiffusionSimulator() {delete d3T; delete T;}
 	// Functions
 	const char * getTestCasesStr();
 	void initUI(DrawingUtilitiesClass * DUC);
@@ -119,7 +130,7 @@ private:
 
 	Grid *T = nullptr;
 	Grid3d* d3T = nullptr;
-	
+
 	int _m = 16;
 	int _n = 16;
 	int _p = 16;
@@ -127,4 +138,4 @@ private:
 	float alpha = 0.3;//diffusion coef
 };
 
-#endif
+#endif 

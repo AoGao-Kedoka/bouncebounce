@@ -3,7 +3,10 @@
 #include <random>
 using namespace std;
 
-Grid3d::Grid3d(int x, int y, int z) {
+Grid3d::Grid3d(int x, int y, int z)
+{
+	this->e2 = std::mt19937 (rd());
+	this ->dist = std::uniform_real_distribution<Real> (-1.0, 1.0);
 	this->setDimensions(std::make_tuple(x, y, z));
 }
 
@@ -11,11 +14,6 @@ void Grid3d::setDimensions(std::tuple<int, int, int> dim3D) {
 	this->m = std::get<0>(dim3D);
 	this->n = std::get<1>(dim3D);
 	this->p = std::get<2>(dim3D);
-
-	std::random_device rd;
-	std::mt19937 e2(rd());
-	std::uniform_real_distribution<Real> dist(-1.0, 1.0);
-
 
 	this->gridData.resize(m, std::vector<std::vector<Real>>(n, std::vector<Real>(p, 0)));
 
@@ -30,8 +28,49 @@ void Grid3d::setDimensions(std::tuple<int, int, int> dim3D) {
 
 }
 
+void Grid3d::resize(std::tuple<int, int, int> dim3D) {
+	auto new_m = std::get<0>(dim3D);
+	auto new_n = std::get<1>(dim3D);
+	auto new_p = std::get<2>(dim3D);
+
+	if (this->m == new_m && this->n == new_n && this->p == new_p) {
+		return;
+	}
+
+	this->gridData.resize(new_m, std::vector<std::vector<Real>>(new_n, std::vector<Real>(new_p, 0)));
+
+	for (auto& row : this->gridData) {
+		row.resize(new_n, std::vector<Real>(new_p, 0));
+
+		for (auto& column : row) {
+			column.resize(new_p, 0);
+		}
+	}
+
+	for (auto i = 0; i < new_m; ++i) {
+		// n columns
+		for (auto j = 0; j < new_n; ++j) {
+			for (auto k =0; k < new_p; ++k) {
+				if (i == 0 || j == 0 || k == 0 || (i == new_m - 1) || (j == new_n - 1) || (k == new_p - 1)) {
+					this->gridData[i][j][k] = 0;
+				}
+				else {
+					if (i >= this->m - 1 || j >= this->n-1 || k >= this->p-1) {
+						this->gridData[i][j][k] = dist(e2);
+					}
+				}
+			}
+		}
+	}
+
+	this->m = new_m;
+	this->n = new_n;
+	this->p = new_p;
+}
 
 Grid::Grid(int x, int y) {
+	this->e2 = std::mt19937(rd());
+	this->dist = std::uniform_real_distribution<Real>(-1.0, 1.0);
 	this->setDimensions(std::make_pair(x, y));
 }
 
@@ -40,11 +79,6 @@ Grid::Grid(int x, int y) {
 void Grid::setDimensions(std::pair<int, int> dim2D) {
 	this->m = dim2D.first;
 	this->n = dim2D.second;
-
-	// Random values in range [-1.0, 1.0]
-	std::random_device rd;
-	std::mt19937 e2(rd());
-	std::uniform_real_distribution<Real> dist(-1.0, 1.0);
 
 	// Initialize MxN matrix with 0 values
 	this->gridData.resize(m, std::vector<Real>(n, 0));
@@ -56,6 +90,39 @@ void Grid::setDimensions(std::pair<int, int> dim2D) {
 			this->gridData[i][j] = dist(e2);
 		}
 	}
+}
+
+
+void Grid::resize(std::pair<int, int> dim2D) {
+	auto new_m = std::get<0>(dim2D);
+	auto new_n = std::get<1>(dim2D);
+
+	if (this->m == new_m && this->n == new_n) {
+		return;
+	}
+
+	this->gridData.resize(new_m, std::vector<Real>(new_n, 0));
+
+	for (auto& row : this->gridData) {
+		row.resize(new_n, 0);
+	}
+
+	for (auto i = 0; i < new_m; ++i) {
+		// n columns
+		for (auto j = 0; j < new_n; ++j) {
+				if (i == 0 || j == 0 || (i == new_m - 1) || (j == new_n - 1)) {
+					this->gridData[i][j] = 0;
+				}
+				else {
+					if (i >= this->m - 1 || j >= this->n - 1) {
+						this->gridData[i][j] = dist(e2);
+					}
+				}
+		}
+	}
+
+	this->m = new_m;
+	this->n = new_n;
 }
 
 
@@ -80,10 +147,11 @@ void DiffusionSimulator::reset() {
 void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
+
 	TwAddVarRW(DUC->g_pTweakBar, "alpha", TW_TYPE_FLOAT, &this->alpha, "min=0.3, max=1, step=0.1");
-	TwAddVarRW(DUC->g_pTweakBar, "m", TW_TYPE_INT8, &this->_m, "min=3");
-	TwAddVarRW(DUC->g_pTweakBar, "n", TW_TYPE_INT8, &this->_n, "min=3");
-	TwAddVarRW(DUC->g_pTweakBar, "p", TW_TYPE_INT8, &this->_p, "min=3");
+	TwAddVarRW(DUC->g_pTweakBar, "m", ETwType::TW_TYPE_UINT16, &this->_m, "min=3");
+	TwAddVarRW(DUC->g_pTweakBar, "n", ETwType::TW_TYPE_UINT16, &this->_n, "min=3");
+	TwAddVarRW(DUC->g_pTweakBar, "p", ETwType::TW_TYPE_UINT16, &this->_p, "min=3");
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -94,23 +162,36 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	switch (m_iTestCase)
 	{
 	case 0:
-		T = new Grid(_m, _n);
+		delete d3T;
+		delete T;
+
 		d3T = nullptr;
+		T = new Grid(_m, _n);
+
 		cout << "Explicit solver!\n";
 		break;
 	case 1:
-		T = new Grid(_m, _n);
+		delete d3T;
+		delete T;
+
 		d3T = nullptr;
+		T = new Grid(_m, _n);
 		cout << "Implicit solver!\n";
 		break;
 	case 2:
-		T = nullptr;
+		delete d3T;
+		delete T;
+
 		d3T = new Grid3d(_m, _n, _p);
+		T = nullptr;
 		cout << "3D Explicit solver!\n";
 		break;
 	case 3:
-		T = nullptr;
+		delete d3T;
+		delete T;
+
 		d3T = new Grid3d(_m, _n, _p);
+		T = nullptr;
 		cout << "3D Implicit solver!\n";
 		break;
 	default:
@@ -291,7 +372,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {//add your 
 
 	// setupA(a, factor)
 	// factor is this->alpha * timestep
-	this->setupA(*A, alpha * timeStep);
+	this->setupA(*A, this->alpha * timeStep);
 	setupB(*b);
 
 	// perform solve
@@ -313,8 +394,6 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {//add your 
 	delete A;
 	delete b;
 }
-
-
 
 void DiffusionSimulator::setupB3d(std::vector<Real>& b) {//add your own parameters
 
@@ -390,8 +469,8 @@ void DiffusionSimulator::setupA3d(SparseMatrix<Real>& A, double factor) {//add y
 					A.set_element(gridIndex + 1, gridIndex, -factor);
 					A.set_element(gridIndex - columns, gridIndex, -factor);
 					A.set_element(gridIndex + columns, gridIndex, -factor);
-					A.set_element(gridIndex - depth, gridIndex, -factor);
-					A.set_element(gridIndex + depth, gridIndex, -factor);
+					A.set_element(gridIndex - rows * columns, gridIndex, -factor);
+					A.set_element(gridIndex + rows * columns, gridIndex, -factor);
 				}
 			}
 		}
@@ -407,7 +486,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit3d(float timeStep) {
 
 	// setupA(a, factor)
 	// factor is this->alpha * timestep
-	this->setupA3d(*A, alpha * timeStep);
+	this->setupA3d(*A, this->alpha * timeStep);
 	setupB3d(*b);
 
 	// perform solve
@@ -431,36 +510,52 @@ void DiffusionSimulator::diffuseTemperatureImplicit3d(float timeStep) {
 }
 
 
-
-
 void DiffusionSimulator::simulateTimestep(float timeStep) {
 	// update current setup for each frame
 
 	switch (m_iTestCase) {
-	case 0: {
-		if (!this->T)
-			this->T = new Grid(_m, _n);
+	case 0:
+	{
+		if (!this->T) {
+			this->T = new Grid(this->_m, this->_n);
+		}
+		else {
+			this->T->resize(std::make_pair(this->_m, this->_n));
+		}
 		Grid* temp = T;
 		T = diffuseTemperatureExplicit(timeStep);
 		delete temp;
 		break;
 	}
 	case 1:
-		if (!this->T)
-			this->T = new Grid(_m, _n);
+		if (!this->T) {
+			this->T = new Grid(this->_m, this->_n);
+		}
+		else {
+			this->T->resize(std::make_pair(this->_m, this->_n));
+		}
 		this->diffuseTemperatureImplicit(timeStep);
 		break;
-	case 2: {
-		if (!this->d3T)
+	case 2:
+	{
+		if (!this->d3T) {
 			this->d3T = new Grid3d(_m, _n, _p);
+		}
+		else {
+			this->d3T->resize(std::make_tuple(this->_m, this->_n, this->_p));
+		}
 		Grid3d* temp3D = d3T;
 		d3T = diffuseTemperatureExplicit3d(timeStep);
 		delete temp3D;
 		break;
 	}
 	case 3:
-		if (!this->d3T)
+		if (!this->d3T) {
 			this->d3T = new Grid3d(_m, _n, _p);
+		}
+		else {
+			this->d3T->resize(std::make_tuple(this->_m, this->_n, this->_p));
+		}
 		this->diffuseTemperatureImplicit3d(timeStep);
 		break;
 	default:
@@ -511,7 +606,6 @@ void DiffusionSimulator::drawObjects()
 
 }
 
-
 void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
 	drawObjects();
@@ -529,4 +623,4 @@ void DiffusionSimulator::onMouse(int x, int y)
 	m_oldtrackmouse.y = y;
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
-}
+} 
