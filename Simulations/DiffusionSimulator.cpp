@@ -294,8 +294,7 @@ Real DiffusionSimulator::updateValuesExplicit3d(Parameters3d& param) {
 }
 
 
-void DiffusionSimulator::setupB(std::vector<Real>& b) {//add your own parameters
-
+void DiffusionSimulator::setupB(std::vector<Real>& b) {
 	//set vector B[sizeX*sizeY]
 	for (int i = 0; i < b.size(); i++) {
 		b.at(i) = 0;
@@ -311,7 +310,7 @@ void DiffusionSimulator::setupB(std::vector<Real>& b) {//add your own parameters
 
 }
 
-void DiffusionSimulator::fillT(std::vector<Real>& x) {//add your own parameters
+void DiffusionSimulator::fillT(std::vector<Real>& x) {
 	//fill T with solved vector x
 	//make sure that the temperature in boundary cells stays zero
 	std::vector<std::vector<Real>>& data = this->T->gridData;
@@ -330,8 +329,8 @@ void DiffusionSimulator::fillT(std::vector<Real>& x) {//add your own parameters
 
 }
 
-void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor) {//add your own parameters
-	//setup Matrix A[sizeX*sizeY*sizeZ, sizeX*sizeY*sizeZ]
+void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor) {
+	// setup Matrix A[sizeX*sizeY*sizeZ, sizeX*sizeY*sizeZ]
 	// set with:  A.set_element( index1, index2 , value );
 	// if needed, read with: A(index1, index2);
 	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
