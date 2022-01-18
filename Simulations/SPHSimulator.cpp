@@ -57,14 +57,59 @@ void SPHSimulator::externalForcesCalculations(float timeElapsed)
 {
 }
 
+void computeMassDensity(Particle p)
+{
+
+}
+
+void computePressure(Particle p) 
+{
+
+}
+
+void computeForce(Particle p)
+{
+
+}
+
+void computeLocation(Particle p)
+{
+	// compute euler
+
+	//check collision
+}
+
+
 void SPHSimulator::simulateTimestep(float timeStep)
 {
-	switch (m_iTestCase)
-	{
-		default:
-			break;
+	for (size_t i = 0; i < _width; ++i) {
+		for (size_t j = 0; j < _height; ++j) {
+			for (size_t k = 0; k < _length; ++k) {
+				computeMassDensity(particles[i][j][k]);
+				computePressure(particles[i][j][k]);
+			}
+		}
+	}
+
+	for (size_t i = 0; i < _width; ++i) {
+		for (size_t j = 0; j < _height; ++j) {
+			for (size_t k = 0; k < _length; ++k) {
+				computeForce(particles[i][j][k]);
+			}
+		}
+	}
+	
+	for (size_t i = 0; i < _width; ++i) {
+		for (size_t j = 0; j < _height; ++j) {
+			for (size_t k = 0; k < _length; ++k) {
+				computeLocation(particles[i][j][k]);
+			}
+		}
 	}
 }
+
+
+
 
 void SPHSimulator::onClick(int x, int y)
 {
