@@ -1,6 +1,7 @@
 #include "SPHSimulator.h"
 
 #define GRAVITY Vec3(0, -0.98,0);
+typedef std::vector < std::vector<std::vector<Particle>>> field;
 SPHSimulator::SPHSimulator(int width, int height, int length) :
 	_width(width), _length(length), _height(height)
 {
@@ -73,7 +74,7 @@ void computeForce(Particle p)
 void computeLocation(Particle* p, float timeStep)
 {
 	// compute velocity using Leap Frog
-	Vec3 acc = timeStep * p->f / p->rho - GRAVITY;
+	Vec3 acc = timeStep * p->f / p->rho + GRAVITY;
 	p->v += timeStep * acc;
 	p->pos += timeStep * p->v;
 		
@@ -87,14 +88,14 @@ void computeLocation(Particle* p, float timeStep)
 		p->v.x *= -0.5;
 		p->pos.x = MAX_X - EPS;
 	}
-	if (p->pos.y <= MIN_X) {
-		p->v.y *= -0.5;
-		p->pos.y = MIN_X + EPS;
+	if (p->pos.z <= MIN_X) {
+		p->v.z *= -0.5;
+		p->pos.z = MIN_X + EPS;
 	}
 	
-	if (p->pos.y >= MAX_X) {
-		p->v.y *= -0.5;
-		p->pos.y = MAX_X - EPS;
+	if (p->pos.z >= MAX_X) {
+		p->v.z *= -0.5;
+		p->pos.z = MAX_X - EPS;
 	}
 	
 	// groud
@@ -102,9 +103,12 @@ void computeLocation(Particle* p, float timeStep)
 		p->v.y *= -0.5;
 		p->pos.y = MIN_Y + EPS;
 	}
-	
-	
 
+}
+
+void detectCollision(field particles, Particle* p)
+{
+	
 }
 
 void SPHSimulator::simulateTimestep(float timeStep)
@@ -130,6 +134,7 @@ void SPHSimulator::simulateTimestep(float timeStep)
 		for (size_t j = 0; j < _height; ++j) {
 			for (size_t k = 0; k < _length; ++k) {
 				computeLocation(&particles[i][j][k], timeStep);
+				detectCollision(particles, &particles[i][j][k]);
 			}
 		}
 	}

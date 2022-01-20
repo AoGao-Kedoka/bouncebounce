@@ -3,8 +3,8 @@
 #include "Simulator.h"
 #include "Particle.h"
 
-#define MIN_X -10
-#define MAX_X 10
+#define MIN_X -1
+#define MAX_X 1
 #define MIN_Y 0
 #define EPS 0.001
 class SPHSimulator :public Simulator {
