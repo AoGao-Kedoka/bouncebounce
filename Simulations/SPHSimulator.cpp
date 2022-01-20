@@ -106,11 +106,6 @@ void computeLocation(Particle* p, float timeStep)
 
 }
 
-void detectCollision(field particles, Particle* p)
-{
-	
-}
-
 void SPHSimulator::simulateTimestep(float timeStep)
 {
 	for (size_t i = 0; i < _width; ++i) {
@@ -134,7 +129,6 @@ void SPHSimulator::simulateTimestep(float timeStep)
 		for (size_t j = 0; j < _height; ++j) {
 			for (size_t k = 0; k < _length; ++k) {
 				computeLocation(&particles[i][j][k], timeStep);
-				detectCollision(particles, &particles[i][j][k]);
 			}
 		}
 	}
