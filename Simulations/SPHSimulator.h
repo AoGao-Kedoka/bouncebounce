@@ -23,10 +23,12 @@ public:
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
-	inline int flatten(int x, int y, int z)
+	template<typename T=int>
+	constexpr int flatten(int x, int y, int z) const
 	{
 		return z + _height * y + _height * _length * x;
 	}
+
 
 private:
 	Vec3 externalForce;
