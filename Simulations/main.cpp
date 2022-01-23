@@ -355,7 +355,7 @@ int main(int argc, char* argv[])
 	//g_pSimulator= new RigidBodySystemSimulator();
 #endif
 #ifdef SPH_SYSTEM
-	g_pSimulator= new SPHSimulator(20,5,20);
+	g_pSimulator= new SPHSimulator(20,20,20);
 #endif
 	g_pSimulator->reset();
 

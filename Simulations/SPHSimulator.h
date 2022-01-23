@@ -7,6 +7,7 @@
 #define MAX_X 1
 #define MIN_Y 0
 #define EPS 0.001
+
 class SPHSimulator :public Simulator {
 public:
 	// Constructors
@@ -22,6 +23,11 @@ public:
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
+	inline int flatten(int x, int y, int z)
+	{
+		return z + _height * y + _height * _length * x;
+	}
+
 private:
 	Vec3 externalForce;
 	Point2D m_mouse;
@@ -31,7 +37,7 @@ private:
 	int _width;
 	int _length;
 	int _height;
-	std::vector < std::vector<std::vector<Particle>>> particles;
+	std::vector<Particle> particles;
 	float _distance_between = 0.05;
 };
 
