@@ -59,16 +59,30 @@ void SPHSimulator::externalForcesCalculations(float timeElapsed)
 {
 }
 
-void computeMassDensity(Particle p)
+void computeMassDensity(Particle*  p)
 {
+	Vec3 r_ij = p->pos - p->tmp_pos;
+
+	float  r = p->pos[0] - p->tmp_pos[0];
+	float r2 = std::pow(r, 2);
+
+	if (r2 <= 0.002) {
+		p->rho = 0.002 * 315.f / (64.f * 3.1415 * std::pow(0.046, 9)) * std::pow(0.001 - r2, 3.f);
+	}
 }
 
-void computePressure(Particle p)
+void computePressure(Particle* p)
 {
+	p->p = 3.f * (p->rho - 1000.0f);
 }
 
-void computeForce(Particle p)
+void computeForce(Particle* p)
 {
+	Vec3 f_preffusre(0, 0, 0);
+	Vec3 f_viscosity(0, 0, 0);
+
+	Vec3 r_ijv = p->pos - p->tmp_pos;
+	float r_ij = r_ijv[0];
 }
 
 void computeLocation(Particle* p, float timeStep)
@@ -111,8 +125,8 @@ void SPHSimulator::simulateTimestep(float timeStep)
 	for (size_t i = 0; i < _width; ++i) {
 		for (size_t j = 0; j < _height; ++j) {
 			for (size_t k = 0; k < _length; ++k) {
-				computeMassDensity(particles[i][j][k]);
-				computePressure(particles[i][j][k]);
+				computeMassDensity(&particles[i][j][k]);
+				computePressure(&particles[i][j][k]);
 			}
 		}
 	}
@@ -120,7 +134,7 @@ void SPHSimulator::simulateTimestep(float timeStep)
 	for (size_t i = 0; i < _width; ++i) {
 		for (size_t j = 0; j < _height; ++j) {
 			for (size_t k = 0; k < _length; ++k) {
-				computeForce(particles[i][j][k]);
+				computeForce(&particles[i][j][k]);
 			}
 		}
 	}
