@@ -1,6 +1,6 @@
 #include "SPHSimulator.h"
 
-#define GRAVITY Vec3(0, -0.98,0);
+#define GRAVITY Vec3(0, -9.8,0);
 
 SPHSimulator::SPHSimulator(int width, int height, int length) :
 	_width(width), _length(length), _height(height)
@@ -8,12 +8,22 @@ SPHSimulator::SPHSimulator(int width, int height, int length) :
 	for (size_t i = 0; i < width; ++i) {
 		for (size_t j = 0; j < height; ++j) {
 			for (size_t k = 0; k < length; ++k) {
-				Particle p{ Vec3((float)i * _distance_between,(float)j * _distance_between,(float)k * _distance_between), 0, Vec3(0,0.1, 0.3) };
-				particles.push_back(p);
+				particles.push_back(
+					new Particle{
+						Vec3((float)i * _distance_between,(float)j * _distance_between,(float)k * _distance_between), //position
+						1 / M, // mass 
+						Vec3(0,0.1, 0.3) //color
+					}
+				);
 			}
 		}
 	}
 	this->reset();
+}
+
+SPHSimulator::~SPHSimulator() {
+	for (auto p : particles)
+		delete p;
 }
 
 const char* SPHSimulator::getTestCasesStr()
@@ -35,14 +45,15 @@ void SPHSimulator::reset()
 
 void SPHSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
-	for (size_t i = 0; i < _width; ++i) {
-		for (size_t j = 0; j < _height; ++j) {
-			for (size_t k = 0; k < _length; ++k) {
-				DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, particles[flatten(i,j,k)].color);
-				DUC->drawSphere(particles[flatten(i,j,k)].pos -
-					Vec3((_width * _distance_between) / 2, (_length * _distance_between) / 2, (_height * _distance_between) / 2), Vec3(0.02f, 0.02f, 0.02f));
-			}
-		}
+	for (auto p : particles) {
+		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, p->color);
+		DUC->drawSphere(p->pos -
+			Vec3(
+				(_width * _distance_between) / 2, 
+				(_length * _distance_between) / 2, 
+				(_height * _distance_between) / 2), 
+			Vec3(0.02f, 0.02f, 0.02f)
+		);
 	}
 }
 
@@ -55,37 +66,64 @@ void SPHSimulator::externalForcesCalculations(float timeElapsed)
 {
 }
 
-void computeMassDensity(Particle*  p)
+// Compute density and pressure of particle p
+void SPHSimulator::computeDensityAndPressure(Particle* p)
 {
-	Vec3 r_ij = p->pos - p->tmp_pos;
+	// Compute Density
+	p->rho = 0.f;
+	// p_j loops over all other particles
+	for (auto &p_j : particles) {
+		Vec3 r_ij = p_j->pos - p->pos;
+		// Euclidean distance
+		float r = norm(p_j->pos - p->pos);
+		float r2 = r * r;
 
-	float  r = p->pos[0] - p->tmp_pos[0];
-	float r2 = std::pow(r, 2);
-
-	if (r2 <= 0.002) {
-		p->rho = 0.002 * 315.f / (64.f * 3.1415 * std::pow(0.046, 9)) * std::pow(0.001 - r2, 3.f);
+		// r is inside the kernel radius (0 otherwise)
+		if (r2 <= H2)
+			p->rho += M * POLY6 * std::pow(H2 - r2, 3.f);
 	}
+
+	// Compute Pressure
+	p->p = GAS_CONST * (p->rho - REST_DENS);	
 }
 
-void computePressure(Particle* p)
+void SPHSimulator::computeForces(Particle* p)
 {
-	p->p = 3.f * (p->rho - 1000.0f);
+	Vec3 f_pressure(0., 0., 0.);
+	Vec3 f_viscosity(0., 0., 0.);
+	for (auto p_j : particles) {
+		// TODO do this better
+		// i == j 
+		if (p_j->pos.x == p->pos.x &&
+			p_j->pos.y == p->pos.y &&
+			p_j->pos.z == p->pos.z) continue;
+
+		Vec3 r_ijv = p->pos - p_j->pos;
+		float r_ij = norm(r_ijv);
+
+		if (r_ij <= H) {
+			// compute pressure force contribution
+
+			f_pressure += -M * (p->p + p_j->p) / (2 * p_j->rho) *
+				POLY6_GRAD_PRESS * r_ijv / r_ij * std::pow(H - r_ij, 2.0f);
+
+			f_viscosity += (p_j->v - p->v) * M / p_j->rho *
+				POLY6_GRAD_VISC * (H - r_ij);
+		}
+	}
+
+	f_viscosity *= MU;
+
+	Vec3 f_gravity = p->rho * GRAVITY;
+
+	p->f = f_pressure + f_viscosity + f_gravity;
 }
 
-void computeForce(Particle* p)
+void SPHSimulator::computeLocation(Particle* p, float timeStep)
 {
-	Vec3 f_preffusre(0, 0, 0);
-	Vec3 f_viscosity(0, 0, 0);
-
-	Vec3 r_ijv = p->pos - p->tmp_pos;
-	float r_ij = r_ijv[0];
-}
-
-void computeLocation(Particle* p, float timeStep)
-{
-	// compute velocity using Leap Frog
-	Vec3 acc = timeStep * p->f / p->rho + GRAVITY;
-	p->v += timeStep * acc;
+	// compute velocity using forward euler
+	//Vec3 acc = timeStep * p->f / p->rho; // + GRAVITY;
+	p->v += timeStep * p->f / p->rho;
 	p->pos += timeStep * p->v;
 		
 	// boundary walls
@@ -108,39 +146,37 @@ void computeLocation(Particle* p, float timeStep)
 		p->pos.z = MAX_X - EPS;
 	}
 	
-	// groud
+	// ground
 	if (p->pos.y <= MIN_Y) {
 		p->v.y *= -0.5;
 		p->pos.y = MIN_Y + EPS;
 	}
 
+	// dampen velocity
+	p->v *= 0.98;
 }
 
 void SPHSimulator::simulateTimestep(float timeStep)
 {
-	for (size_t i = 0; i < _width; ++i) {
-		for (size_t j = 0; j < _height; ++j) {
-			for (size_t k = 0; k < _length; ++k) {
-				computeMassDensity(&particles[flatten(i,j,k)]);
-				computePressure(&particles[flatten(i,j,k)]);
-			}
-		}
-	}
+	for(Particle* p: particles)
+		computeDensityAndPressure(p);
 
-	for (size_t i = 0; i < _width; ++i) {
-		for (size_t j = 0; j < _height; ++j) {
-			for (size_t k = 0; k < _length; ++k) {
-				computeForce(&particles[flatten(i,j,k)]);
-			}
-		}
-	}
+	for (Particle* p : particles)
+		computeForces(p);
 
-	for (size_t i = 0; i < _width; ++i) {
-		for (size_t j = 0; j < _height; ++j) {
-			for (size_t k = 0; k < _length; ++k) {
-				computeLocation(&particles[flatten(i,j,k)], timeStep);
-			}
-		}
+	for (Particle* p : particles)
+		computeLocation(p, timeStep);
+
+	float maxP = particles[0]->p;
+	float minP = particles[0]->p;
+	for (Particle* p : particles)
+		if (p->p > maxP) maxP = p->p;
+		else if (p->p < minP) minP = p->p;
+
+	std::cout << minP << ", " << maxP << std::endl;
+
+	for (Particle* p : particles) {
+		p->color = Vec3((p->p + minP)/abs((maxP-minP)), 0.1, 0.3) ;
 	}
 }
 
