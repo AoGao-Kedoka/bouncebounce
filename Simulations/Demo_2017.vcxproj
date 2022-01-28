@@ -224,6 +224,7 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="SpatialHash.cpp" />
     <ClCompile Include="SPHSimulator.cpp" />
     <ClCompile Include="TemplateSimulator.cpp" />
     <ClCompile Include="util\FFmpeg.cpp" />
@@ -231,8 +232,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DrawingUtilitiesClass.h" />
+    <ClInclude Include="Hasher.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="Simulator.h" />
+    <ClInclude Include="SpatialHash.h" />
     <ClInclude Include="SPHSimulator.h" />
     <ClInclude Include="TemplateSimulator.h" />
     <ClInclude Include="util\FFmpeg.h" />
