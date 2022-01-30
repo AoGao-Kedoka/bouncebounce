@@ -68,11 +68,11 @@ void SPHSimulator::notifyCaseChanged(int testCase)
 	switch (m_iTestCase) {
 	case 0:
 		cleanupParticles();
-		buildParticles(10, 5, 5);
+		buildParticles(10, 10, 10);
 		break;
 	case 1:
 		cleanupParticles();
-		buildParticles(10, 10, 10);
+		buildParticles(15, 15, 15);
 		break;
 		
 	}
