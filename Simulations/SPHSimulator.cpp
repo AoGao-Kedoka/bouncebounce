@@ -1,5 +1,5 @@
 #include "SPHSimulator.h"
-
+#include <set>
 #define GRAVITY Vec3(0, -9.8,0);
 
 SPHSimulator::SPHSimulator(int width, int height, int length) :
@@ -72,7 +72,10 @@ void SPHSimulator::computeDensityAndPressure(Particle* p)
 	// Compute Density
 	p->rho = 0.f;
 	// p_j loops over all other particles
+
+	//for (auto &p_j : this->spatialHash->collisions(p)) {
 	for (auto &p_j : particles) {
+
 		Vec3 r_ij = p_j->pos - p->pos;
 		// Euclidean distance
 		float r = norm(p_j->pos - p->pos);
@@ -91,7 +94,8 @@ void SPHSimulator::computeForces(Particle* p)
 {
 	Vec3 f_pressure(0., 0., 0.);
 	Vec3 f_viscosity(0., 0., 0.);
-	for (auto p_j : particles) {
+
+	for (auto p_j  : this->spatialHash->collisions(p)) {
 		// TODO do this better
 		// i == j 
 		if (p_j->pos.x == p->pos.x &&
@@ -158,6 +162,8 @@ void SPHSimulator::computeLocation(Particle* p, float timeStep)
 
 void SPHSimulator::simulateTimestep(float timeStep)
 {
+	this->spatialHash = new SpatialHash{ this->particles, this->H*100};
+
 	for(Particle* p: particles)
 		computeDensityAndPressure(p);
 
@@ -172,8 +178,6 @@ void SPHSimulator::simulateTimestep(float timeStep)
 	for (Particle* p : particles)
 		if (p->p > maxP) maxP = p->p;
 		else if (p->p < minP) minP = p->p;
-
-	std::cout << minP << ", " << maxP << std::endl;
 
 	for (Particle* p : particles) {
 		p->color = Vec3((p->p + minP)/abs((maxP-minP)), 0.1, 0.3) ;
@@ -192,4 +196,126 @@ void SPHSimulator::onMouse(int x, int y)
 	m_oldtrackmouse.y = y;
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
+}
+
+
+
+std::ostream& operator<< (std::ostream& os, const Particle& p) {
+	return	os << '(' << p.pos.x << ','
+		<< p.pos.y << ','
+		<< p.pos.z << ')';
+}
+
+
+ostream& operator<<(ostream& os, const std::vector<Particle*>& particles) {
+	os << "VECTOR:" << '[';
+
+	auto iterator = particles.begin();
+	for (; iterator != particles.end() && std::next(iterator) != particles.end(); iterator++) {
+		os << **iterator << ", ";
+	}
+	if (iterator != particles.end()) {
+		os << **iterator;
+	}
+	os << ']';
+
+	return os;
+}
+
+ostream& operator<<(ostream& os, const std::list<Particle*>& particles) {
+	os << "LIST:" << '[';
+
+	auto iterator = particles.begin();
+	for (; iterator != particles.end() && std::next(iterator) != particles.end(); iterator++) {
+		os << **iterator << ", ";
+	}
+	if (iterator != particles.end()) {
+		os << **iterator;
+	}
+	os << ']';
+
+	return os;
+}
+
+ostream& operator<<(ostream& os, const std::vector<std::list<Particle*>>& particles) {
+	os << "VECTOR:" << '[';
+
+	auto iterator = particles.begin();
+	for (; iterator != particles.end() && std::next(iterator) != particles.end(); iterator++) {
+		os << *iterator << ", ";
+	}
+	if (iterator != particles.end()) {
+		os << *iterator;
+	}
+	os << ']';
+
+	return os;
+}
+
+/////////////////////////////////////////////////////// SPATIAL HASH
+
+SpatialHash::SpatialHash(const std::vector<Particle*>& particles, float h) : h{ h }, discretize{ h }, hasher{ new ParticleHasher{ h } } {
+	this->hashTable.resize(this->next_prime(2 * particles.size()));
+
+	for (Particle* particle : particles) {
+		(*this)[particle->pos].push_back(particle);
+	}
+}
+
+std::list<Particle*> SpatialHash::collisions(const Particle* p) {
+	nVec3i bbmin = this->discretize(p->pos - Vec3(this->h, this->h, this->h));
+	nVec3i bbmax = this->discretize(p->pos + Vec3(this->h, this->h, this->h));
+
+	std::list<Particle*> collisions_list;
+	std::set<Particle*> collisions;
+
+	for (auto x = bbmin.x; x < bbmax.x; x++) {
+		for (auto y = bbmin.y; y < bbmax.y; y++) {
+			for (auto z = bbmin.z; z < bbmax.z; z++) {
+				for (Particle* particle : (*this)[Vec3(x, y, z)]) {
+					//if (sqrt(particle->pos.squaredDistanceTo(p->pos)) <= h) { //! will be checked for later
+					collisions.insert(particle);
+					//}
+				}
+			}
+		}
+	}
+
+	for (Particle* particle : collisions) {
+		collisions_list.push_back(particle);
+	}
+	return collisions_list;
+}
+
+std::list<Particle*>& SpatialHash::operator[](const Vec3& pos) {
+
+	return this->hashTable[this->hasher->Hash(pos, this->hashTable.size())];
+}
+
+size_t SpatialHash::next_prime(size_t minimum) {
+
+outer:
+	while (true) {
+		minimum++;
+
+		if (minimum == 2 || minimum == 3)
+			return minimum;
+
+		if (minimum % 2 == 0 || minimum % 3 == 0)
+			continue;
+
+		int divisor = 6;
+		while (divisor * divisor - 2 * divisor + 1 <= minimum) {
+
+			if (minimum % (divisor - 1) == 0
+				|| minimum % (divisor + 1) == 0)
+				goto outer;
+
+			divisor += 6;
+
+		}
+
+		return minimum;
+
+	}
 }

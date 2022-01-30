@@ -1,5 +1,6 @@
 #ifndef PARTICLE_h
 #define PARTICLE_h
+#include <iostream>
 
 class Particle
 {
@@ -21,6 +22,10 @@ public:
 		if (w == 0.0f) return -1;
 		return 1 / w;
 	}
+
+	friend std::ostream& operator<< (std::ostream& os, const Particle& p);
 };
+
+
 
 #endif
