@@ -14,6 +14,8 @@ public:
 	SPHSimulator(int width, int length, int height);
 	~SPHSimulator();
 	// Functions
+	void buildParticles(int width, int length, int height);
+	void cleanupParticles();
 	const char * getTestCasesStr();
 	void initUI(DrawingUtilitiesClass * DUC);
 	void reset();
@@ -44,7 +46,7 @@ private:
 	int _width;
 	int _length;
 	int _height;
-	std::vector<Particle*> particles;
+	std::vector<Particle> particles;
 	float _distance_between = 0.01;
 
 	// rest density
