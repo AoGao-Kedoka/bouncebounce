@@ -33,7 +33,9 @@ void SPHSimulator::buildParticles(int width, int length, int height) {
 }
 const char* SPHSimulator::getTestCasesStr()
 {
-	return "SPH_SIMPLE, SPH_COMPLICATE";
+	return "WATER (1000),WATER (2197),\
+			MUCUS (1000),MUCUS (2197),\
+			GAS (1000),GAS (2197)";
 }
 
 void SPHSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -57,9 +59,42 @@ void SPHSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 				(_width * _distance_between) / 2, 
 				(_length * _distance_between) / 2, 
 				(_height * _distance_between) / 2), 
-			Vec3(0.02f, 0.02f, 0.02f)
+			Vec3(0.019f, 0.019f, 0.019f)
 		);
 	}
+}
+
+void SPHSimulator::setConstants(int state) {
+	if (state == STATE_WATER) {
+		H = 0.0457f;
+		M = 0.02f;
+		MU = 3.5f;
+		REST_DENS = 998.29f;
+		B = 0;
+		CURR_STATE = STATE_WATER;
+	}
+	else if (state == STATE_MUCUS) {
+		H = 0.0726f;
+		M = 0.04f;
+		MU = 36.f;
+		REST_DENS = 1000.0f;
+		B = 0;
+		CURR_STATE = STATE_MUCUS;
+	}
+	else if (state == STATE_GAS) {
+		H = 0.06f;
+		REST_DENS = 0.59f;
+		M = 0.00005f;
+		MU = 0.01f;
+		B = 5;
+		CURR_STATE = STATE_GAS;
+	}
+	H2 = H * H;
+	H6 = H * H * H * H * H * H;
+	H9 = H * H * H * H * H * H * H * H * H;
+	POLY6 = 315.f / (64.f * PI * H9);
+	POLY6_GRAD_PRESS = -45.f / (PI * H6);
+	POLY6_GRAD_VISC = 45.f / (PI * H6);
 }
 
 void SPHSimulator::notifyCaseChanged(int testCase)
@@ -67,14 +102,35 @@ void SPHSimulator::notifyCaseChanged(int testCase)
 	m_iTestCase = testCase;
 	switch (m_iTestCase) {
 	case 0:
+		setConstants(STATE_WATER);
 		cleanupParticles();
 		buildParticles(10, 10, 10);
 		break;
 	case 1:
+		setConstants(STATE_WATER);
 		cleanupParticles();
-		buildParticles(15, 15, 15);
+		buildParticles(13, 13, 13);
 		break;
-		
+	case 2:
+		setConstants(STATE_MUCUS);
+		cleanupParticles();
+		buildParticles(10, 10, 10);
+		break;
+	case 3:
+		setConstants(STATE_MUCUS);
+		cleanupParticles();
+		buildParticles(13, 13, 13);
+		break;
+	case 4:
+		setConstants(STATE_GAS);
+		cleanupParticles();
+		buildParticles(10, 10, 10);
+		break;
+	case 5:
+		setConstants(STATE_GAS);
+		cleanupParticles();
+		buildParticles(13, 13, 13);
+		break;
 	}
 }
 
@@ -149,6 +205,9 @@ void SPHSimulator::computeForces(Particle* p)
 
 	Vec3 f_gravity = p->rho * GRAVITY;
 
+	// B == 0 when not gas
+	if(B > 0) f_gravity = B * (p->rho - REST_DENS) * GRAVITY;
+
 	p->f = f_pressure + f_viscosity + f_gravity;
 }
 
@@ -158,13 +217,12 @@ void SPHSimulator::computeLocation(Particle* p, float timeStep)
 	//Vec3 acc = timeStep * p->f / p->rho; // + GRAVITY;
 	p->v += timeStep * p->f / p->rho;
 	p->pos += timeStep * p->v;
-		
+	
 	// boundary walls
 	if (p->pos.x <= MIN_X) {
 		p->v.x *= -0.5;
 		p->pos.x = MIN_X + EPS;
 	}
-	
 	if (p->pos.x >= MAX_X) {
 		p->v.x *= -0.5;
 		p->pos.x = MAX_X - EPS;
@@ -173,16 +231,19 @@ void SPHSimulator::computeLocation(Particle* p, float timeStep)
 		p->v.z *= -0.5;
 		p->pos.z = MIN_X + EPS;
 	}
-	
 	if (p->pos.z >= MAX_X) {
 		p->v.z *= -0.5;
 		p->pos.z = MAX_X - EPS;
 	}
-	
 	// ground
 	if (p->pos.y <= MIN_Y) {
 		p->v.y *= -0.5;
 		p->pos.y = MIN_Y + EPS;
+	}
+	// sky, only for gas
+	if (B > 0.f && p->pos.y >= MAX_Y) {
+		p->v.y *= -0.5;
+		p->pos.y = MAX_Y - EPS;
 	}
 
 	// dampen velocity
@@ -206,10 +267,15 @@ void SPHSimulator::simulateTimestep(float timeStep)
 		if (p.p > maxP) maxP = p.p;
 		else if (p.p < minP) minP = p.p;
 
-	std::cout << minP << ", " << maxP << std::endl;
-
+	// color particles based on density
 	for (Particle &p : particles) {
-		p.color = Vec3((p.p + minP)/abs((maxP-minP)), 0.1, 0.3) ;
+		double r = (p.p + minP) / abs((maxP - minP));
+		if(CURR_STATE == STATE_WATER)
+			p.color = Vec3(r, 0.1, 0.3) * 0.2 + p.color * 0.8;
+		else if (CURR_STATE == STATE_MUCUS)
+			p.color = Vec3(r, 0.3, 0.1) * 0.2 + p.color * 0.8;
+		else 
+			p.color = Vec3(1-r/2, 1-r/2, 1-r/2) * 0.2 + p.color * 0.8;
 	}
 }
 

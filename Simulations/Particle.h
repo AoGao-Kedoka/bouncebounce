@@ -4,11 +4,10 @@
 class Particle
 {
 public:
-	Particle(Vec3 pos, float w, Vec3 c) : pos(pos), tmp_pos(pos), w(w), v(0, 0,0), color(c) {
+	Particle(Vec3 pos, float w, Vec3 c) : pos(pos), w(w), v(0, 0,0), color(c) {
 	}
 	
 	Vec3 pos;
-	Vec3 tmp_pos;
 	float w; //Inverse mass 
 	Vec3 v; // velocity
 	
