@@ -19,8 +19,10 @@ public:
 	SPHSimulator(int width, int length, int height);
 	~SPHSimulator();
 	// Functions
-	const char * getTestCasesStr();
-	void initUI(DrawingUtilitiesClass * DUC);
+	void buildParticles(int width, int length, int height);
+	void cleanupParticles();
+	const char* getTestCasesStr();
+	void initUI(DrawingUtilitiesClass* DUC);
 	void reset();
 	void drawFrame(ID3D11DeviceContext* pd3dImmediateContext);
 	void notifyCaseChanged(int testCase);
@@ -34,25 +36,24 @@ public:
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
-	constexpr int flatten(int x, int y, int z) const
-	{
+	constexpr int flatten(int x, int y, int z) const {
 		return z + _height * y + _height * _length * x;
 	}
 
 
 private:
+	SpatialHash* spatialHash;
+
 	Vec3 externalForce;
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
-	
+
 	int _width;
 	int _length;
 	int _height;
-	std::vector<Particle*> particles;
+	std::vector<Particle> particles;
 	float _distance_between = 0.01;
-
-	SpatialHash* spatialHash;
 
 	// rest density
 	static constexpr float REST_DENS = 1000.0f;
@@ -97,24 +98,6 @@ private:
 };
 
 
-
-
-/*
-void print(const std::vector<std::list<Particle*>>& particles) {
-	std::cout << "VECTOR:" << '[';
-	
-	auto iterator = particles.begin();
-	for (; iterator != particles.end() && std::next(iterator) != particles.end(); iterator++) {
-		std::cout << *iterator << ", ";
-	}
-	if (iterator != particles.end()) {
-		std::cout << *iterator;
-	}
-	std::cout << ']';
-	
-}
-*/
-
 /////////////////////////////////////////////////////// HASHER
 
 class IHasher {
@@ -146,12 +129,13 @@ private:
 
 class SpatialHash {
 public:
-		SpatialHash(const std::vector<Particle*>& particles, float h);
-		std::vector<Particle*> collisions(const Particle* p);
+		SpatialHash(const std::vector<Particle>& particles, float h);
+		std::vector<const Particle*> collisions(const Particle* p);
 
-		std::vector<Particle*>& operator[](const Vec3&);
-		void reset(const std::vector<Particle*>& particles);
-		std::vector<std::vector<Particle*>> hashTable;
+		std::vector<const Particle*>& operator[](const Vec3&);
+		void reset(const std::vector<Particle>& particles);
+
+		std::vector<std::vector<const Particle*>> hashTable;
 	private:
 		float h; //smoothing kernel radius
 		Discretize discretize;
