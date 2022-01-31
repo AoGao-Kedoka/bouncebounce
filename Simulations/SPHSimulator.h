@@ -41,7 +41,6 @@ public:
 		return z + _height * y + _height * _length * x;
 	}
 
-
 private:
 	Vec3 externalForce;
 	Point2D m_mouse;
@@ -80,6 +79,64 @@ private:
 	float POLY6 = 315.f / (64.f * PI * H9);
 	float POLY6_GRAD_PRESS = -45.f / (PI * H6);
 	float POLY6_GRAD_VISC = 45.f / (PI * H6);
+
+
+	// -----------------------------
+	// MASS SPRING SYSTEM
+	// -----------------------------
+
+	// toogles the Mass Spring System simulation
+	bool coupleSimulation = false;
+
+	struct MassPoint {
+		Vec3 p;
+		Vec3 v;
+		bool isFixed;
+		MassPoint(Vec3 p, Vec3 v, bool isFixed) : p(p), v(v), isFixed(isFixed) {};
+	};
+	// Spring connecting Mass Points A and B
+	struct Spring {
+		int A;
+		int B;
+		// initial length
+		float L;
+		Spring(int A, int B, float L) : A(A), B(B), L(L) {};
+	};
+	// Data Attributes
+	float m_fMass;
+	float m_fStiffness;
+	float m_fDamping;
+	int m_iIntegrator;
+	float m_fRestLength;
+	bool m_bIsGravity;
+	Vec3 m_vGravityValue;
+	float m_fTimeStep;
+	float m_fRadius = 0.05;
+
+	// Containers
+	std::vector<MassPoint> masspoints;
+	std::vector<Spring> springs;
+
+	void initSprings();
+	float calcDist(Vec3 A, Vec3 B, Vec3* dir);
+	std::pair<Vec3, Vec3> calcAcc(Vec3 A, Vec3 B);
+	void computeEuler(float timeStep);
+	void computeMidPoint(float timeStep);
+	void computeLeapFrog(float timeStep);
+	void writeState();
+
+	void setMass(float mass);
+	void setStiffness(float stiffness);
+	void setDampingFactor(float damping);
+	void setGravityValue(Vec3 g);
+	void setGravityValue(float x, float y, float z);
+	int addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed);
+	void addSpring(int masspoint1, int masspoint2, float initialLength);
+	int getNumberOfMassPoints();
+	int getNumberOfSprings();
+	Vec3 getPositionOfMassPoint(int index);
+	Vec3 getVelocityOfMassPoint(int index);
+	void applyExternalForce(Vec3 force);
 };
 
 #endif

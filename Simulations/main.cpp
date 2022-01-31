@@ -36,6 +36,7 @@ int g_iTestCase = 0;
 int g_iPreTestCase = -1;
 bool  g_bSimulateByStep = false;
 bool firstTime = true;
+bool g_bCoupleSimulation = false;
 // Video recorder
 FFmpeg* g_pFFmpegVideoRecorder = nullptr;
 

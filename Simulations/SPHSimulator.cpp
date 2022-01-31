@@ -3,9 +3,17 @@
 #define GRAVITY Vec3(0, -9.8,0);
 
 SPHSimulator::SPHSimulator(int width, int height, int length) :
-	_width(width), _length(length), _height(height)
+	_width(width), _length(length), _height(height),
+	// MASS SPRING SYSTEM PART:
+	m_fMass(10.0f),
+	m_fStiffness(40.0f),
+	m_fDamping(0.0f),
+	m_fRestLength(1.0f),
+	m_vGravityValue(0, -9.8f, 0),
+	m_bIsGravity(false)
 {
 	buildParticles(width, height, length);
+	initSprings();
 }
 
 SPHSimulator::~SPHSimulator() {
@@ -41,6 +49,7 @@ const char* SPHSimulator::getTestCasesStr()
 void SPHSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
+	TwAddVarRW(DUC->g_pTweakBar, "Couple Simulation", TW_TYPE_BOOLCPP, &coupleSimulation, "");
 }
 
 void SPHSimulator::reset()
@@ -61,6 +70,19 @@ void SPHSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 				(_height * _distance_between) / 2), 
 			Vec3(0.019f, 0.019f, 0.019f)
 		);
+	}
+
+	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(0.2,0.2,0.5));
+	// MASS SPRING SYSTEM
+	for (const auto& s : springs) {
+		DUC->beginLine();
+		DUC->drawLine(
+			getPositionOfMassPoint(s.A), { 0.3,0.3,0.6 },
+			getPositionOfMassPoint(s.B), { 0.3,0.3,0.6 }
+		);
+		DUC->endLine();
+		DUC->drawSphere(this->getPositionOfMassPoint(s.A), m_fRadius);
+		DUC->drawSphere(this->getPositionOfMassPoint(s.B), m_fRadius);
 	}
 }
 
@@ -99,6 +121,11 @@ void SPHSimulator::setConstants(int state) {
 
 void SPHSimulator::notifyCaseChanged(int testCase)
 {
+	initSprings();
+	if (!coupleSimulation) {
+		springs.clear();
+		masspoints.clear();
+	}
 	m_iTestCase = testCase;
 	switch (m_iTestCase) {
 	case 0:
@@ -218,6 +245,34 @@ void SPHSimulator::computeLocation(Particle* p, float timeStep)
 	p->v += timeStep * p->f / p->rho;
 	p->pos += timeStep * p->v;
 	
+	// Check collision with Mass Spring System
+	// F(x) < 0 : inside
+	// F(x) = 0 : on the surface
+	// F(x) > 0 : outside the primitive
+	// F_sphere(x) = || x - center||^2 - radius^2
+	
+	auto F_sphere = [](Vec3 x, Vec3 c, float r) {
+		return (norm(x - c)) * (norm(x - c)) - r*r;
+	};
+
+	for (int i = 0; i < masspoints.size(); i++) {
+		Vec3 c = getPositionOfMassPoint(i);
+		float r = m_fRadius;
+		if (F_sphere(p->pos, c, r) < 0.) {
+			// position is inside the circle --> handle collision
+			// contact point
+			Vec3 cp = c + r * (p->pos - c) / norm(p->pos - c);
+			// penetration depth
+			float d = abs(norm(c - p->pos) - r);
+			// unit sufrace normal of the sphere
+			Vec3 n = -(c - p->pos) / norm(c - p->pos);
+
+			// corrigate the position of the particle
+			p->pos = cp;
+			p->v = p->v - (1) * dot(p->v, n) * n;
+		}
+	}
+
 	// boundary walls
 	if (p->pos.x <= MIN_X) {
 		p->v.x *= -0.5;
@@ -240,7 +295,7 @@ void SPHSimulator::computeLocation(Particle* p, float timeStep)
 		p->v.y *= -0.5;
 		p->pos.y = MIN_Y + EPS;
 	}
-	// sky, only for gas
+	// ceiling, only for gas
 	if (B > 0.f && p->pos.y >= MAX_Y) {
 		p->v.y *= -0.5;
 		p->pos.y = MAX_Y - EPS;
@@ -277,6 +332,11 @@ void SPHSimulator::simulateTimestep(float timeStep)
 		else 
 			p.color = Vec3(1-r/2, 1-r/2, 1-r/2) * 0.2 + p.color * 0.8;
 	}
+
+	// -----------------------------
+	// MASS SPRING SYSTEM
+	// -----------------------------
+	computeMidPoint(timeStep);
 }
 
 void SPHSimulator::onClick(int x, int y)
@@ -291,4 +351,126 @@ void SPHSimulator::onMouse(int x, int y)
 	m_oldtrackmouse.y = y;
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
+}
+
+// -----------------------------
+// MASS SPRING SYSTEM
+// -----------------------------
+void SPHSimulator::initSprings() {
+	springs.clear();
+	masspoints.clear();
+
+	Vec3 p1 = { 0,-0.3,-0.3 };
+	Vec3 p2 = { 0,0.3,0.3 };
+	Vec3 v1 = { -0.3,0,0.3 };
+	Vec3 v2 = { 0.3,0,-0.3 };
+	int A = addMassPoint(p1, v1, false);
+	int B = addMassPoint(p2, v2, false);
+	addSpring(A, B, m_fRestLength);
+	
+	Vec3 p3 = { 0,0,0 };
+	Vec3 v3 = { 0,0,0 };
+	int C = addMassPoint(p3, v3, false);
+	addSpring(A, C, m_fRestLength);
+	addSpring(B, C, m_fRestLength);
+}
+
+float SPHSimulator::calcDist(Vec3 A, Vec3 B, Vec3* dir) {
+	float dX = A.x - B.x;
+	float dY = A.y - B.y;
+	float dZ = A.z - B.z;
+
+	dir->x = dX;
+	dir->y = dY;
+	dir->z = dZ;
+
+	return std::sqrt(
+		std::pow(dX, 2) +
+		std::pow(dY, 2) +
+		std::pow(dZ, 2)
+	);
+}
+
+std::pair<Vec3, Vec3> SPHSimulator::calcAcc(Vec3 A, Vec3 B) {
+	Vec3 dir;
+
+	auto distance = this->calcDist(A, B, &dir);
+
+	Vec3 force = m_fStiffness *
+		(distance - m_fRestLength) *
+		(dir / distance);
+
+	Vec3 a1 = -force / m_fMass;
+	Vec3 a2 = force / m_fMass;
+
+	if (m_bIsGravity) {
+		a1 += m_vGravityValue;
+		a2 += m_vGravityValue;
+	}
+
+	return std::make_pair(a1, a2);
+}
+
+int SPHSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed)
+{
+	masspoints.emplace_back(position, Velocity, isFixed);
+
+	return masspoints.size() - 1;
+}
+
+void SPHSimulator::addSpring(int i, int j, float L)
+{
+	if (i >= masspoints.size() || j >= masspoints.size())
+		throw std::invalid_argument("Masspoint index out of range.");
+
+	springs.emplace_back(i, j, L);
+}
+
+int SPHSimulator::getNumberOfMassPoints()
+{
+	return masspoints.size();
+}
+
+int SPHSimulator::getNumberOfSprings()
+{
+	return springs.size();
+}
+
+Vec3 SPHSimulator::getPositionOfMassPoint(int index)
+{
+	return masspoints[index].p;
+}
+
+Vec3 SPHSimulator::getVelocityOfMassPoint(int index)
+{
+	return masspoints[index].v;
+}
+
+void SPHSimulator::computeMidPoint(float timeStep) {
+	for (const auto& s : springs) {
+		auto* A = &masspoints[s.A];
+		auto* B = &masspoints[s.B];
+
+		// compute midpoint
+		auto midStepPos1 = A->p + 1 / 2 * timeStep * A->v;
+		auto midStepPos2 = B->p + 1 / 2 * timeStep * B->v;
+
+		auto acc = this->calcAcc(A->p, B->p);
+
+		auto midStepVel1 = A->v + 1 / 2 * timeStep * acc.first;
+		auto midStepVel2 = B->v + 1 / 2 * timeStep * acc.second;
+		acc = this->calcAcc(midStepPos1, midStepPos2);
+
+		// compute full step
+		A->p += timeStep * midStepVel1;
+		B->p += timeStep * midStepVel2;
+		A->v += timeStep * acc.first;
+		B->v += timeStep * acc.second;
+
+		// bounce bounce from the floor
+		if (A->p.y <= -1)
+			A->v = -A->v;
+		if (B->p.y <= -1)
+			B->v = -B->v;
+	}
 }
