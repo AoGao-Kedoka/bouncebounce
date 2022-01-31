@@ -1,7 +1,6 @@
 #include "SPHSimulator.h"
-#include <set>
 #define GRAVITY Vec3(0, -9.8,0);
-
+static bool print = true;
 SPHSimulator::SPHSimulator(int width, int height, int length) :
 	_width(width), _length(length), _height(height)
 {
@@ -10,7 +9,7 @@ SPHSimulator::SPHSimulator(int width, int height, int length) :
 			for (size_t k = 0; k < length; ++k) {
 				particles.push_back(
 					new Particle{
-						Vec3((float)i * _distance_between,(float)j * _distance_between,(float)k * _distance_between), //position
+						Vec3((float)i * _distance_between ,(float)j * _distance_between,(float)k * _distance_between), //position
 						1 / M, // mass 
 						Vec3(0,0.1, 0.3) //color
 					}
@@ -18,6 +17,8 @@ SPHSimulator::SPHSimulator(int width, int height, int length) :
 			}
 		}
 	}
+
+	this->spatialHash = new SpatialHash{ this->particles, this->H/2 };
 	this->reset();
 }
 
@@ -72,9 +73,7 @@ void SPHSimulator::computeDensityAndPressure(Particle* p)
 	// Compute Density
 	p->rho = 0.f;
 	// p_j loops over all other particles
-
-	//for (auto &p_j : this->spatialHash->collisions(p)) {
-	for (auto &p_j : particles) {
+	for (auto& p_j : this->spatialHash->collisions(p)) {
 
 		Vec3 r_ij = p_j->pos - p->pos;
 		// Euclidean distance
@@ -82,12 +81,14 @@ void SPHSimulator::computeDensityAndPressure(Particle* p)
 		float r2 = r * r;
 
 		// r is inside the kernel radius (0 otherwise)
-		if (r2 <= H2)
+		if (r2 <= H2) {
 			p->rho += M * POLY6 * std::pow(H2 - r2, 3.f);
+		}
 	}
 
 	// Compute Pressure
 	p->p = GAS_CONST * (p->rho - REST_DENS);	
+
 }
 
 void SPHSimulator::computeForces(Particle* p)
@@ -95,7 +96,10 @@ void SPHSimulator::computeForces(Particle* p)
 	Vec3 f_pressure(0., 0., 0.);
 	Vec3 f_viscosity(0., 0., 0.);
 
-	for (auto p_j  : this->spatialHash->collisions(p)) {
+	auto& neighbours = this->spatialHash->collisions(p);
+	if (print) std::cout << "Neighbours: " << neighbours.size()  << "\t Instead of: "<< this->particles.size() << std::endl;
+
+	for (auto& p_j  : neighbours) {
 		// TODO do this better
 		// i == j 
 		if (p_j->pos.x == p->pos.x &&
@@ -116,11 +120,14 @@ void SPHSimulator::computeForces(Particle* p)
 		}
 	}
 
+
 	f_viscosity *= MU;
 
 	Vec3 f_gravity = p->rho * GRAVITY;
 
 	p->f = f_pressure + f_viscosity + f_gravity;
+
+	print = false;
 }
 
 void SPHSimulator::computeLocation(Particle* p, float timeStep)
@@ -162,13 +169,16 @@ void SPHSimulator::computeLocation(Particle* p, float timeStep)
 
 void SPHSimulator::simulateTimestep(float timeStep)
 {
-	this->spatialHash = new SpatialHash{ this->particles, this->H*100};
+	this->spatialHash->reset(this->particles);
+	std::cout << "-------------------------------------" << std::endl;
 
 	for(Particle* p: particles)
 		computeDensityAndPressure(p);
+	print = true;
 
 	for (Particle* p : particles)
 		computeForces(p);
+	print = true;
 
 	for (Particle* p : particles)
 		computeLocation(p, timeStep);
@@ -199,97 +209,51 @@ void SPHSimulator::onMouse(int x, int y)
 }
 
 
-
-std::ostream& operator<< (std::ostream& os, const Particle& p) {
-	return	os << '(' << p.pos.x << ','
-		<< p.pos.y << ','
-		<< p.pos.z << ')';
-}
-
-
-ostream& operator<<(ostream& os, const std::vector<Particle*>& particles) {
-	os << "VECTOR:" << '[';
-
-	auto iterator = particles.begin();
-	for (; iterator != particles.end() && std::next(iterator) != particles.end(); iterator++) {
-		os << **iterator << ", ";
-	}
-	if (iterator != particles.end()) {
-		os << **iterator;
-	}
-	os << ']';
-
-	return os;
-}
-
-ostream& operator<<(ostream& os, const std::list<Particle*>& particles) {
-	os << "LIST:" << '[';
-
-	auto iterator = particles.begin();
-	for (; iterator != particles.end() && std::next(iterator) != particles.end(); iterator++) {
-		os << **iterator << ", ";
-	}
-	if (iterator != particles.end()) {
-		os << **iterator;
-	}
-	os << ']';
-
-	return os;
-}
-
-ostream& operator<<(ostream& os, const std::vector<std::list<Particle*>>& particles) {
-	os << "VECTOR:" << '[';
-
-	auto iterator = particles.begin();
-	for (; iterator != particles.end() && std::next(iterator) != particles.end(); iterator++) {
-		os << *iterator << ", ";
-	}
-	if (iterator != particles.end()) {
-		os << *iterator;
-	}
-	os << ']';
-
-	return os;
-}
-
 /////////////////////////////////////////////////////// SPATIAL HASH
 
-SpatialHash::SpatialHash(const std::vector<Particle*>& particles, float h) : h{ h }, discretize{ h }, hasher{ new ParticleHasher{ h } } {
-	this->hashTable.resize(this->next_prime(2 * particles.size()));
-
-	for (Particle* particle : particles) {
-		(*this)[particle->pos].push_back(particle);
-	}
+SpatialHash::SpatialHash(const std::vector<Particle*>& particles, float h) : h{ h }, discretize{ h }, hasher{ new ParticleHasher{ h } }
+, previous_size{ particles.size() }, previous_prime{ this->next_prime(previous_size) }{
+	this->reset(particles);
 }
 
-std::list<Particle*> SpatialHash::collisions(const Particle* p) {
-	nVec3i bbmin = this->discretize(p->pos - Vec3(this->h, this->h, this->h));
-	nVec3i bbmax = this->discretize(p->pos + Vec3(this->h, this->h, this->h));
+std::vector<Particle*> SpatialHash::collisions(const Particle* p) {
+	std::vector<Particle*> collisions;
 
-	std::list<Particle*> collisions_list;
-	std::set<Particle*> collisions;
+	for (auto x =-1; x <= 1; x++) {
+		for (auto y = -1; y <= 1; y++) {
+			for (auto z = -1; z <= 1; z++) {
 
-	for (auto x = bbmin.x; x < bbmax.x; x++) {
-		for (auto y = bbmin.y; y < bbmax.y; y++) {
-			for (auto z = bbmin.z; z < bbmax.z; z++) {
-				for (Particle* particle : (*this)[Vec3(x, y, z)]) {
-					//if (sqrt(particle->pos.squaredDistanceTo(p->pos)) <= h) { //! will be checked for later
-					collisions.insert(particle);
-					//}
-				}
+				auto& temp = (*this)[Vec3(p->pos.x + h * x,
+					p->pos.y + h * y, 
+					p->pos.z + h * z)];
+
+				std::copy_if(temp.begin(), temp.end(), std::back_inserter(collisions),
+					[&collisions](auto particle) {return std::find(collisions.begin(), collisions.end(), particle) == collisions.end(); }
+				);
+				//if (sqrt(particle->pos.squaredDistanceTo(p->pos)) <= h) {} //! will be checked for in later functions
+
 			}
 		}
 	}
 
-	for (Particle* particle : collisions) {
-		collisions_list.push_back(particle);
-	}
-	return collisions_list;
+	return collisions;
 }
 
-std::list<Particle*>& SpatialHash::operator[](const Vec3& pos) {
+std::vector<Particle*>& SpatialHash::operator[](const Vec3& pos) {
 
 	return this->hashTable[this->hasher->Hash(pos, this->hashTable.size())];
+}
+
+void SpatialHash::reset(const std::vector<Particle*>& particles) {
+	this->hashTable.clear();
+	if (particles.size() != this->previous_size) {
+		this->previous_prime = this->next_prime(previous_size);
+	}
+	this->hashTable.resize(this->previous_prime);
+
+	for (Particle* particle : particles) {
+		(*this)[particle->pos].push_back(particle);
+	}
 }
 
 size_t SpatialHash::next_prime(size_t minimum) {

@@ -12,9 +12,6 @@
 #define EPS 0.001
 
 class SpatialHash;
-ostream& operator<<(ostream& os, const std::vector<Particle*>& particles);
-ostream& operator<<(ostream& os, const std::list<Particle*>& particles);
-ostream& operator<<(ostream& os, const std::vector<std::list<Particle*>>& particles);
 
 class SPHSimulator :public Simulator {
 public:
@@ -85,7 +82,7 @@ private:
 struct Discretize {
 	Discretize(float radius) : radius(radius) {}  // Constructor
 	int operator()(float dimension) const {
-		return floor(dimension / radius);
+		return floor(static_cast<double>(dimension) / radius);
 	}
 
 	nVec3i operator()(Vec3 dimensions) const {
@@ -130,16 +127,16 @@ public:
 	ParticleHasher(float radius) : discretize{ radius } {};
 	virtual size_t Hash(const Vec3& pos, size_t length) override {
 		int rx = discretize(pos.x);
-		int ry = discretize(pos.y);
+		int ry = discretize(pos.y);	
 		int rz = discretize(pos.z);
 
 		static constexpr auto p1 = 73856093;
 		static constexpr auto p2 = 19349663;
 		static constexpr auto p3 = 83492791;
 
-		return (
-			std::abs((rx * p1) ^ (ry * p2) ^ (rz * p3)
-			) % length);
+		return 
+			((rx * p1) ^ (ry * p2) ^ (rz * p3))
+			 % length;
 	}
 private:
 	Discretize discretize;
@@ -150,16 +147,20 @@ private:
 class SpatialHash {
 public:
 		SpatialHash(const std::vector<Particle*>& particles, float h);
-		std::list<Particle*> collisions(const Particle* p);
+		std::vector<Particle*> collisions(const Particle* p);
 
-		std::list<Particle*>& operator[](const Vec3&);
-
-		std::vector<std::list<Particle*>> hashTable;
+		std::vector<Particle*>& operator[](const Vec3&);
+		void reset(const std::vector<Particle*>& particles);
+		std::vector<std::vector<Particle*>> hashTable;
 	private:
-		size_t next_prime(size_t minimum);
-		IHasher* hasher;
 		float h; //smoothing kernel radius
 		Discretize discretize;
+		IHasher* hasher;
+
+		size_t next_prime(size_t minimum);
+
+		size_t previous_size;
+		size_t previous_prime;
 };
 
 
